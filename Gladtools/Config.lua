@@ -61,6 +61,10 @@ GT.PRESETS = {
                 target = false,
                 focus = false,
             },
+            dr = {
+                enabled = true,
+                showOnEnemyFrames = true,
+            },
             trinkets = {
                 enabled = true,
             },
@@ -102,6 +106,10 @@ GT.PRESETS = {
                 arena = true,
                 target = false,
                 focus = false,
+            },
+            dr = {
+                enabled = true,
+                showOnEnemyFrames = true,
             },
             trinkets = {
                 enabled = true,

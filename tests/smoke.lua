@@ -259,4 +259,47 @@ addon.TrinketTracker:HandleCombatLog()
 local trinket = addon.TrinketTracker:GetPrimaryTrinket("Enemy-1")
 assert(trinket and trinket.spellID == 336126, "expected tracked trinket cooldown")
 
+currentCLEU = {
+    0,
+    "SPELL_AURA_APPLIED",
+    0,
+    "Player-1",
+    "Self",
+    COMBATLOG_OBJECT_CONTROL_PLAYER + COMBATLOG_OBJECT_REACTION_FRIENDLY,
+    0,
+    "Enemy-1",
+    "EnemyMage",
+    COMBATLOG_OBJECT_REACTION_HOSTILE,
+    0,
+    118,
+    "Polymorph",
+}
+addon.DRTracker:HandleCombatLog()
+local drStates = addon.DRTracker:GetUnitDRStates("Enemy-1")
+assert(#drStates >= 1, "expected DR state after aura apply")
+assert(drStates[1].category == "incap", "expected incap DR category for Polymorph")
+assert(drStates[1].level == 1, "expected first DR level after first CC")
+assert(drStates[1].isActive == true, "expected DR active while aura is active")
+
+currentCLEU = {
+    0,
+    "SPELL_AURA_REMOVED",
+    0,
+    "Player-1",
+    "Self",
+    COMBATLOG_OBJECT_CONTROL_PLAYER + COMBATLOG_OBJECT_REACTION_FRIENDLY,
+    0,
+    "Enemy-1",
+    "EnemyMage",
+    COMBATLOG_OBJECT_REACTION_HOSTILE,
+    0,
+    118,
+    "Polymorph",
+}
+addon.DRTracker:HandleCombatLog()
+local drAfterRemove = addon.DRTracker:GetUnitDRStates("Enemy-1")
+assert(#drAfterRemove >= 1, "expected DR state to persist during reset window")
+assert(drAfterRemove[1].isActive == false, "expected DR inactive after aura removal")
+assert(drAfterRemove[1].resetRemaining > 0, "expected DR timer after aura removal")
+
 print("Gladtools modular smoke test passed")

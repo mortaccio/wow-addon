@@ -9,6 +9,7 @@ Retail World of Warcraft Arena PvP addon with modular tracking for cooldowns, tr
 - Near frames (`party1-4` in range)
 - Cooldown icons with numeric countdown text on frames
 - Trinket/racial timer detection and display
+- DR tracking (stun/incap/fear/silence/root) with live reset timers on enemy frames
 - Cast bars for arena units (+ optional focus/target)
 - Pointer system (off / all friendlies / healers only)
 - Presets (`Healer`, `DPS`) with editable overrides and automatic `Custom` state
@@ -90,7 +91,7 @@ Each spell entry includes:
 ## TODO (Competitive 3v3)
 
 - Expand dataset with spec/talent/PvP-talent overrides and patch-aware values
-- Implement full DR tracking and UI display (stun/fear/silence/etc.)
+- Expand DR spell coverage and edge-case handling (class talents/variants/immunity nuances)
 - Add stronger near-frame range engine (e.g., LibRangeCheck integration)
 
 ## Visual Preview Without WoW

@@ -119,11 +119,23 @@ function SettingsUI:CreatePanel()
         GT:SetSetting({ "castBars", "enabled" }, value, "settings_ui")
     end)
 
-    self.controls.showCooldownIcons = GT:CreateBasicCheckbox(panel, "Show cooldown icons", 20, -330, function(value)
+    self.controls.showDR = GT:CreateBasicCheckbox(panel, "Show DR tracking on enemy frames", 20, -330, function(value)
+        local settings = GT.db and GT.db.settings
+        if not (settings and settings.dr) then
+            return
+        end
+
+        settings.dr.enabled = value and true or false
+        settings.dr.showOnEnemyFrames = value and true or false
+        GT:EvaluatePresetState()
+        GT:OnSettingsChanged("settings_ui")
+    end)
+
+    self.controls.showCooldownIcons = GT:CreateBasicCheckbox(panel, "Show cooldown icons", 20, -358, function(value)
         GT:SetSetting({ "unitFrames", "cooldowns", "enabled" }, value, "settings_ui")
     end)
 
-    self.controls.trackTrinkets = GT:CreateBasicCheckbox(panel, "Track trinkets", 20, -358, function(value)
+    self.controls.trackTrinkets = GT:CreateBasicCheckbox(panel, "Track trinkets", 20, -386, function(value)
         GT:SetSetting({ "trinkets", "enabled" }, value, "settings_ui")
     end)
 
@@ -185,6 +197,7 @@ function SettingsUI:RefreshControls()
     self.controls.showEnemy:SetChecked(settings.unitFrames.enemy.enabled and true or false)
     self.controls.showNear:SetChecked(settings.unitFrames.near.enabled and true or false)
     self.controls.showCastBars:SetChecked(settings.castBars.enabled and true or false)
+    self.controls.showDR:SetChecked(settings.dr.enabled and settings.dr.showOnEnemyFrames and true or false)
     self.controls.showCooldownIcons:SetChecked(settings.unitFrames.cooldowns.enabled and true or false)
     self.controls.trackTrinkets:SetChecked(settings.trinkets.enabled and true or false)
 

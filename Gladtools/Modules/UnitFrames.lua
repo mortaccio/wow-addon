@@ -113,8 +113,14 @@ function UnitFrames:CreateUnitFrame(groupName, unit, index)
 
     frame.nameText = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     frame.nameText:SetPoint("TOPLEFT", 8, -6)
-    frame.nameText:SetWidth(185)
+    frame.nameText:SetWidth(132)
     frame.nameText:SetJustifyH("LEFT")
+
+    frame.drText = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    frame.drText:SetPoint("TOPRIGHT", -34, -6)
+    frame.drText:SetWidth(94)
+    frame.drText:SetJustifyH("RIGHT")
+    frame.drText:SetText("")
 
     frame.healthBar = CreateFrame("StatusBar", nil, frame)
     frame.healthBar:SetStatusBarTexture("Interface/TargetingFrame/UI-StatusBar")
@@ -354,8 +360,61 @@ function UnitFrames:UpdateHealthAndName(frame)
     frame.healthValue:SetText(string.format("%d%%", (health / maxHealth) * 100))
 end
 
+local function formatDRNext(nextMultiplier)
+    if nextMultiplier <= 0 then
+        return "IMM"
+    end
+
+    local percent = math.floor((nextMultiplier * 100) + 0.5)
+    return tostring(percent)
+end
+
+function UnitFrames:UpdateDR(frame, guid)
+    if not frame.drText then
+        return
+    end
+
+    if frame.groupName ~= "enemy" then
+        frame.drText:SetText("")
+        return
+    end
+
+    local drSettings = GT:GetSetting({ "dr" })
+    if not (drSettings and drSettings.enabled and drSettings.showOnEnemyFrames) then
+        frame.drText:SetText("")
+        return
+    end
+
+    local entries = guid and GT.DRTracker and GT.DRTracker:GetUnitDRStates(guid) or {}
+    if #entries == 0 then
+        frame.drText:SetText("")
+        return
+    end
+
+    local parts = {}
+    local maxShown = math.min(2, #entries)
+
+    for index = 1, maxShown do
+        local entry = entries[index]
+        local nextText = formatDRNext(entry.nextMultiplier or 1)
+        local remainText = GT:FormatRemaining(entry.resetRemaining or 0)
+
+        local token = string.format("%s%s:%s", entry.label or "DR", entry.isActive and "*" or "", nextText)
+        if remainText ~= "" then
+            token = token .. "(" .. remainText .. ")"
+        end
+
+        parts[#parts + 1] = token
+    end
+
+    frame.drText:SetText(table.concat(parts, " "))
+end
+
 function UnitFrames:UpdateFrame(frame)
     if not self:ShouldShowFrame(frame) then
+        if frame.drText then
+            frame.drText:SetText("")
+        end
         frame:Hide()
         return
     end
@@ -370,6 +429,7 @@ function UnitFrames:UpdateFrame(frame)
     self:UpdateHealthAndName(frame)
     self:UpdateCooldownRow(frame, guid)
     self:UpdateTrinket(frame, guid)
+    self:UpdateDR(frame, guid)
 end
 
 function UnitFrames:UpdateAll()
