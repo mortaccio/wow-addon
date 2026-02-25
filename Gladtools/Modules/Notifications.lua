@@ -52,6 +52,58 @@ local function getSpellName(spellID, fallback)
     return fallback or ("Spell " .. tostring(spellID))
 end
 
+local function buildAuraData(...)
+    local first = ...
+    if type(first) == "table" then
+        local aura = first
+        return {
+            name = aura.name,
+            spellID = aura.spellId or aura.spellID,
+            duration = aura.duration,
+            expirationTime = aura.expirationTime,
+        }
+    end
+
+    local name, _, _, _, duration, expirationTime, _, _, _, spellID = ...
+    if not name then
+        return nil
+    end
+
+    return {
+        name = name,
+        spellID = spellID,
+        duration = duration,
+        expirationTime = expirationTime,
+    }
+end
+
+local function findAuraBySpellID(unit, spellID, filter)
+    if not unit or type(spellID) ~= "number" then
+        return nil
+    end
+
+    if AuraUtil and AuraUtil.FindAuraBySpellID then
+        local auraData = buildAuraData(AuraUtil.FindAuraBySpellID(spellID, unit, filter))
+        if auraData then
+            return auraData
+        end
+    end
+
+    if UnitAura then
+        for index = 1, 40 do
+            local auraData = buildAuraData(UnitAura(unit, index, filter))
+            if not auraData then
+                break
+            end
+            if auraData.spellID == spellID then
+                return auraData
+            end
+        end
+    end
+
+    return nil
+end
+
 local function setTextureColor(texture, r, g, b, a)
     if texture and texture.SetVertexColor then
         texture:SetVertexColor(r, g, b, a or 1)
@@ -223,16 +275,80 @@ function Notifications:HandleIncomingCCCast(unit, isChannel)
     self:EnqueueNotice(message, 1.00, 0.70, 0.22)
 end
 
+function Notifications:GetVisibleUnitsForGUID(guid)
+    local units = {}
+    if not (guid and GT.UnitMap and GT.UnitMap.unitsByGUID) then
+        return units
+    end
+
+    local mappedUnits = GT.UnitMap.unitsByGUID[guid]
+    if not mappedUnits then
+        return units
+    end
+
+    for unit in pairs(mappedUnits) do
+        if UnitExists and UnitExists(unit) then
+            units[#units + 1] = unit
+        end
+    end
+
+    return units
+end
+
+function Notifications:GetAuraTimingForUnits(units, spellID)
+    if type(units) ~= "table" then
+        return nil, nil, nil
+    end
+
+    for _, unit in ipairs(units) do
+        local auraData = findAuraBySpellID(unit, spellID, "HARMFUL")
+        if auraData then
+            return auraData.duration, auraData.expirationTime, auraData.name
+        end
+    end
+
+    return nil, nil, nil
+end
+
+function Notifications:GetAuraTimingForGUID(guid, spellID)
+    local units = self:GetVisibleUnitsForGUID(guid)
+    return self:GetAuraTimingForUnits(units, spellID)
+end
+
 function Notifications:NormalizeCCState()
     local now = getNow()
 
     for guid, state in pairs(self.healerCCByGUID) do
+        local visibleUnits = self:GetVisibleUnitsForGUID(guid)
+        local hasVisibleUnit = #visibleUnits > 0
         local count = 0
+        local toRemove = nil
         for spellID, entry in pairs(state.spells) do
-            if entry.expiresAt and entry.expiresAt <= now then
-                state.spells[spellID] = nil
+            local auraDuration, auraExpiresAt, auraName = self:GetAuraTimingForUnits(visibleUnits, spellID)
+            if auraExpiresAt and auraExpiresAt > now then
+                local duration = auraDuration
+                if not duration or duration <= 0 then
+                    duration = math.max(0.1, auraExpiresAt - now)
+                end
+                entry.duration = duration
+                entry.expiresAt = auraExpiresAt
+                entry.startTime = auraExpiresAt - duration
+                entry.spellName = auraName or entry.spellName
+                count = count + 1
+            elseif hasVisibleUnit then
+                toRemove = toRemove or {}
+                toRemove[#toRemove + 1] = spellID
+            elseif entry.expiresAt and entry.expiresAt <= now then
+                toRemove = toRemove or {}
+                toRemove[#toRemove + 1] = spellID
             else
                 count = count + 1
+            end
+        end
+
+        if toRemove then
+            for _, spellID in ipairs(toRemove) do
+                state.spells[spellID] = nil
             end
         end
 
@@ -287,16 +403,33 @@ function Notifications:SetHealerCC(guid, spellID, spellName, category, active)
     end
 
     if active then
+        local now = getNow()
         local resolvedName = spellName or getSpellName(spellID)
+        local auraDuration, auraExpiresAt, auraName = self:GetAuraTimingForGUID(guid, spellID)
+        local duration = self.CC_FALLBACK_SECONDS
+        local expiresAt = now + duration
+
+        if auraExpiresAt and auraExpiresAt > now then
+            expiresAt = auraExpiresAt
+            if auraDuration and auraDuration > 0 then
+                duration = auraDuration
+            else
+                duration = math.max(0.1, auraExpiresAt - now)
+            end
+            resolvedName = auraName or resolvedName
+        end
+
         state.spells[spellID] = {
             spellID = spellID,
             spellName = resolvedName,
             category = category,
-            expiresAt = getNow() + self.CC_FALLBACK_SECONDS,
+            startTime = expiresAt - duration,
+            duration = duration,
+            expiresAt = expiresAt,
         }
         state.lastSpellName = resolvedName
         state.lastCategory = category
-        state.lastApplied = getNow()
+        state.lastApplied = now
     else
         state.spells[spellID] = nil
     end

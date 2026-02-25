@@ -21,6 +21,7 @@ Retail World of Warcraft Arena PvP addon with modular tracking for cooldowns, tr
 - Enemy "CC on you" cast-start warnings at top of screen
 - Enhanced player nameplates: arena labels, healer icon, class-color HP, large CC debuffs (right), your debuffs (top), and plate cast bars
 - Cooldown tracking now uses Blizzard APIs where available (`C_Spell` / `GetSpellBaseCooldown`) with normalized spec-aware fallback data
+- Nameplate and healer-CC debuff timers now reconcile against live aura durations when unit aura data is available
 - Expanded normalized cooldown and DR datasets for stronger live arena coverage
 - Presets (`Healer`, `DPS`) with editable overrides and automatic `Custom` state
 - Blizzard Settings panel registration (with fallback)
@@ -128,7 +129,7 @@ Each spell entry includes:
 
 - Continue tuning spec/talent/PvP-talent overrides for edge patches
 - Expand special-case DR handling (immunity/hybrid aura variants)
-- Add stronger near-frame range engine (e.g., LibRangeCheck integration)
+- Optional: integrate LibRangeCheck for more precise near-frame edge cases
 
 ## Visual Preview Without WoW
 

@@ -432,10 +432,26 @@ function UnitFrames:IsNearUnitInRange(unit)
         return false
     end
 
+    if C_NamePlate and C_NamePlate.GetNamePlateForUnit then
+        local plate = C_NamePlate.GetNamePlateForUnit(unit)
+        if plate then
+            if plate.IsShown then
+                return plate:IsShown()
+            end
+            return true
+        end
+    end
+
+    if UnitIsVisible then
+        local visible = UnitIsVisible(unit)
+        if visible ~= nil then
+            return visible and true or false
+        end
+    end
+
     local nearSettings = GT:GetSetting({ "unitFrames", "near" }) or {}
     local itemID = nearSettings.rangeItem
 
-    -- TODO: Add robust range backend options (e.g., LibRangeCheck) for more accurate near frame filtering.
     if IsItemInRange and itemID then
         local inRange = IsItemInRange(itemID, unit)
         if inRange ~= nil then

@@ -54,6 +54,81 @@ local function getSpellNameAndIcon(spellID)
     return nil, nil
 end
 
+local function buildAuraData(...)
+    local first = ...
+    if type(first) == "table" then
+        local aura = first
+        return {
+            name = aura.name,
+            icon = aura.icon or aura.iconFileID,
+            duration = aura.duration,
+            expirationTime = aura.expirationTime,
+            spellID = aura.spellId or aura.spellID,
+            sourceUnit = aura.sourceUnit or aura.casterUnit,
+            sourceGUID = aura.sourceGUID,
+        }
+    end
+
+    local name, icon, _, _, duration, expirationTime, sourceUnit, _, _, spellID = ...
+    if not name then
+        return nil
+    end
+
+    return {
+        name = name,
+        icon = icon,
+        duration = duration,
+        expirationTime = expirationTime,
+        spellID = spellID,
+        sourceUnit = sourceUnit,
+        sourceGUID = nil,
+    }
+end
+
+local function findAuraBySpellID(unit, spellID, filter)
+    if not unit or type(spellID) ~= "number" then
+        return nil
+    end
+
+    if AuraUtil and AuraUtil.FindAuraBySpellID then
+        local auraData = buildAuraData(AuraUtil.FindAuraBySpellID(spellID, unit, filter))
+        if auraData then
+            return auraData
+        end
+    end
+
+    if C_UnitAuras and C_UnitAuras.GetAuraDataBySpellName then
+        local spellName = nil
+        if C_Spell and C_Spell.GetSpellInfo then
+            local info = C_Spell.GetSpellInfo(spellID)
+            spellName = info and info.name or nil
+        elseif GetSpellInfo then
+            spellName = GetSpellInfo(spellID)
+        end
+
+        if spellName then
+            local auraData = buildAuraData(C_UnitAuras.GetAuraDataBySpellName(unit, spellName, filter))
+            if auraData and auraData.spellID == spellID then
+                return auraData
+            end
+        end
+    end
+
+    if UnitAura then
+        for index = 1, 40 do
+            local auraData = buildAuraData(UnitAura(unit, index, filter))
+            if not auraData then
+                break
+            end
+            if auraData.spellID == spellID then
+                return auraData
+            end
+        end
+    end
+
+    return nil
+end
+
 local function applyHealerRoleTexCoords(texture)
     if not texture then
         return
@@ -423,6 +498,133 @@ function NameplateOverlays:SetAuraState(bucket, guid, spellID, data)
     end
 end
 
+function NameplateOverlays:FindVisibleUnitForGUID(guid)
+    if not (guid and GT.UnitMap and GT.UnitMap.unitsByGUID) then
+        return nil
+    end
+
+    local units = GT.UnitMap.unitsByGUID[guid]
+    if not units then
+        return nil
+    end
+
+    local fallbackUnit = nil
+    for unit in pairs(units) do
+        if UnitExists and UnitExists(unit) then
+            if unit:match("^nameplate%d+$") then
+                return unit
+            end
+            fallbackUnit = fallbackUnit or unit
+        end
+    end
+
+    return fallbackUnit
+end
+
+function NameplateOverlays:IsAuraFromPlayer(entry, auraData)
+    if not entry or not auraData then
+        return false
+    end
+
+    local playerGUID = self.playerGUID or (UnitGUID and UnitGUID("player")) or nil
+    if not playerGUID then
+        return false
+    end
+
+    if auraData.sourceUnit and UnitGUID then
+        local sourceGUID = UnitGUID(auraData.sourceUnit)
+        if sourceGUID then
+            return sourceGUID == playerGUID
+        end
+    end
+
+    if auraData.sourceGUID then
+        return auraData.sourceGUID == playerGUID
+    end
+
+    if entry.sourceGUID then
+        return entry.sourceGUID == playerGUID
+    end
+
+    -- Keep entry when source cannot be resolved from aura payload.
+    return true
+end
+
+function NameplateOverlays:UpdateEntryFromAura(entry, auraData, now)
+    if not (entry and auraData) then
+        return false
+    end
+
+    local duration = tonumber(auraData.duration) or 0
+    local expiresAt = tonumber(auraData.expirationTime) or 0
+
+    if duration <= 0 and expiresAt > now then
+        duration = expiresAt - now
+    end
+    if duration < 0 then
+        duration = 0
+    end
+
+    if expiresAt <= now and duration > 0 then
+        expiresAt = now + duration
+    elseif expiresAt <= 0 and duration > 0 then
+        expiresAt = now + duration
+    elseif expiresAt <= 0 and duration <= 0 then
+        expiresAt = now + 0.1
+        duration = 0.1
+    end
+
+    entry.spellName = auraData.name or entry.spellName
+    entry.icon = auraData.icon or entry.icon
+    entry.duration = duration
+    entry.expiresAt = expiresAt
+    entry.startTime = expiresAt - duration
+    entry.needsResolve = nil
+    return true
+end
+
+function NameplateOverlays:RefreshBucketFromUnit(bucket, guid, unit, filter, requirePlayerSource, pruneMissing)
+    local byGUID = bucket[guid]
+    if not (byGUID and unit) then
+        return
+    end
+
+    if pruneMissing == nil then
+        pruneMissing = true
+    end
+
+    local now = getNow()
+    local toRemove = nil
+    for spellID, entry in pairs(byGUID) do
+        local auraData = findAuraBySpellID(unit, spellID, filter)
+        if auraData and (not requirePlayerSource or self:IsAuraFromPlayer(entry, auraData)) then
+            self:UpdateEntryFromAura(entry, auraData, now)
+        elseif pruneMissing then
+            toRemove = toRemove or {}
+            toRemove[#toRemove + 1] = spellID
+        end
+    end
+
+    if toRemove then
+        for _, spellID in ipairs(toRemove) do
+            byGUID[spellID] = nil
+        end
+    end
+
+    if not next(byGUID) then
+        bucket[guid] = nil
+    end
+end
+
+function NameplateOverlays:RefreshTrackedAurasForUnit(unit, guid)
+    if not (unit and guid) then
+        return
+    end
+
+    self:RefreshBucketFromUnit(self.ccAurasByGUID, guid, unit, "HARMFUL", false)
+    self:RefreshBucketFromUnit(self.playerDebuffsByGUID, guid, unit, "HARMFUL", true)
+end
+
 function NameplateOverlays:GetBucketEntries(bucket, guid)
     local byGUID = bucket[guid]
     if not byGUID then
@@ -648,6 +850,7 @@ function NameplateOverlays:UpdateOverlay(unit, overlay, now)
 
     local _, classFile = UnitClass and UnitClass(unit)
     self:ApplyClassColorHealthBar(unit, overlay, classFile)
+    self:RefreshTrackedAurasForUnit(unit, guid)
     self:UpdateArenaLabel(overlay, guid)
     self:UpdateHealerIcon(overlay, guid)
     self:UpdateCCIcons(overlay, guid, now)
@@ -702,6 +905,11 @@ function NameplateOverlays:TrackCCAura(subEvent, destGUID, destFlags, spellID, s
             duration = duration,
             expiresAt = now + duration,
         })
+
+        local unit = self:FindVisibleUnitForGUID(destGUID)
+        if unit then
+            self:RefreshBucketFromUnit(self.ccAurasByGUID, destGUID, unit, "HARMFUL", false, false)
+        end
     else
         self:SetAuraState(self.ccAurasByGUID, destGUID, spellID, nil)
     end
@@ -728,10 +936,16 @@ function NameplateOverlays:TrackPlayerDebuff(subEvent, sourceGUID, destGUID, spe
         self:SetAuraState(self.playerDebuffsByGUID, destGUID, spellID, {
             spellName = spellName or resolvedName or tostring(spellID),
             icon = resolvedIcon,
+            sourceGUID = sourceGUID,
             startTime = now,
             duration = duration,
             expiresAt = now + duration,
         })
+
+        local unit = self:FindVisibleUnitForGUID(destGUID)
+        if unit then
+            self:RefreshBucketFromUnit(self.playerDebuffsByGUID, destGUID, unit, "HARMFUL", true, false)
+        end
     else
         self:SetAuraState(self.playerDebuffsByGUID, destGUID, spellID, nil)
     end
