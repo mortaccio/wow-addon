@@ -26,7 +26,38 @@ function GT:PrintHelp()
     self:Print("/gladtools preset <healer|dps> - Apply preset")
     self:Print("/gladtools resetpreset - Reset to selected preset")
     self:Print("/gladtools pointers <off|all|healers> - Set pointer mode")
+    self:Print("/gladtools state - Show current preset state")
+    self:Print("/gladtools snapshot - Print live tracker snapshot")
     self:Print("/gladtools help - Show this help")
+end
+
+function GT:PrintRuntimeSnapshot()
+    local counts = (self.UnitFrames and self.UnitFrames.GetVisibleGroupCounts and self.UnitFrames:GetVisibleGroupCounts()) or {}
+    local visibleEnemy = counts.enemy or 0
+    local visibleFriendly = counts.friendly or 0
+    local visibleNear = counts.near or 0
+
+    local cdTotal, cdFriendly, cdEnemy = 0, 0, 0
+    if self.CooldownTracker and self.CooldownTracker.GetActiveCounts then
+        cdTotal, cdFriendly, cdEnemy = self.CooldownTracker:GetActiveCounts()
+    end
+
+    local trinketTotal, trinketFriendly, trinketEnemy = 0, 0, 0
+    if self.TrinketTracker and self.TrinketTracker.GetActiveCounts then
+        trinketTotal, trinketFriendly, trinketEnemy = self.TrinketTracker:GetActiveCounts()
+    end
+
+    local drTracked, drActive = 0, 0
+    if self.DRTracker and self.DRTracker.GetActiveCounts then
+        drTracked, drActive = self.DRTracker:GetActiveCounts()
+    end
+
+    local activeCasts = self.CastBars and self.CastBars.GetActiveCount and self.CastBars:GetActiveCount() or 0
+    local pointerCount = self.PointerSystem and self.PointerSystem.GetVisibleCount and self.PointerSystem:GetVisibleCount() or 0
+
+    self:Print(string.format("Frames E:%d F:%d N:%d | Casts:%d Pointers:%d", visibleEnemy, visibleFriendly, visibleNear, activeCasts, pointerCount))
+    self:Print(string.format("Cooldowns: %d (%d enemy / %d friendly) | Trinkets: %d (%d enemy / %d friendly)", cdTotal, cdEnemy, cdFriendly, trinketTotal, trinketEnemy, trinketFriendly))
+    self:Print(string.format("DR: %d tracked (%d active)", drTracked, drActive))
 end
 
 function GT:SetPointerModeFromSlash(value)
@@ -74,6 +105,8 @@ function GT:HandleSlashCommand(message)
         self:ResetToSelectedPreset()
     elseif command == "pointers" then
         self:SetPointerModeFromSlash(rest)
+    elseif command == "snapshot" then
+        self:PrintRuntimeSnapshot()
     elseif command == "state" then
         self:Print("Preset state: " .. self:GetPresetStateLabel())
     elseif command == "help" then

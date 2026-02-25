@@ -155,6 +155,30 @@ function TrinketTracker:GetPrimaryTrinket(guid)
     return list[1]
 end
 
+function TrinketTracker:GetActiveCounts()
+    self:PurgeExpired()
+
+    local total = 0
+    local friendly = 0
+    local enemy = 0
+    local now = GetTime and GetTime() or 0
+
+    for _, guidTable in pairs(self.activeByGUID or {}) do
+        for _, entry in pairs(guidTable) do
+            if entry.endTime and entry.endTime > now then
+                total = total + 1
+                if entry.isFriendly then
+                    friendly = friendly + 1
+                else
+                    enemy = enemy + 1
+                end
+            end
+        end
+    end
+
+    return total, friendly, enemy
+end
+
 function TrinketTracker:HandleCombatLog()
     if not CombatLogGetCurrentEventInfo then
         return

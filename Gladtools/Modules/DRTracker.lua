@@ -266,6 +266,32 @@ function DRTracker:GetUnitDRStates(guid)
     return list
 end
 
+function DRTracker:GetActiveCounts()
+    if not self:IsEnabled() then
+        return 0, 0
+    end
+
+    self:PurgeExpired()
+
+    local tracked = 0
+    local active = 0
+    local now = getNow()
+
+    for _, guidStates in pairs(self.statesByGUID or {}) do
+        for _, state in pairs(guidStates) do
+            self:NormalizeState(state, now)
+            if state.level and state.level > 0 then
+                tracked = tracked + 1
+                if state.active then
+                    active = active + 1
+                end
+            end
+        end
+    end
+
+    return tracked, active
+end
+
 function DRTracker:HandleCombatLog()
     if not self:IsEnabled() or not CombatLogGetCurrentEventInfo then
         return

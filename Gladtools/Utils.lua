@@ -154,6 +154,21 @@ function GT:FormatRemaining(seconds)
     return string.format("%.1f", seconds)
 end
 
+function GT:FormatCompactNumber(value)
+    local numeric = tonumber(value) or 0
+    local absValue = math.abs(numeric)
+
+    if absValue >= 1000000 then
+        return string.format("%.1fm", numeric / 1000000)
+    end
+
+    if absValue >= 1000 then
+        return string.format("%.1fk", numeric / 1000)
+    end
+
+    return tostring(math.floor(numeric + 0.5))
+end
+
 function GT:GetClassColor(classFile)
     if not classFile then
         return 1, 1, 1

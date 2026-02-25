@@ -13,6 +13,10 @@ Retail World of Warcraft Arena PvP addon with modular tracking for cooldowns, tr
 - Cast bars for arena units (+ optional focus/target)
 - Pointer system (off / all friendlies / healers only) with role-aware color + pulse
 - Cleaner compact visual style: class accent bars, category-colored cooldown borders, DR badges
+- Enhanced frame readability: class icon badge, unit role/tag/status chip, compact HP values, cooldown/trinket summaries
+- Cast bars improved with source tag, state flag (`CS`/`CH`/`NI`), and moving progress spark
+- Pointer markers now include priority labels (`H`, `!`, party index) for quicker reads
+- Live runtime snapshot panel in settings (visible frames, active cooldowns/trinkets/DR/casts/pointers)
 - Presets (`Healer`, `DPS`) with editable overrides and automatic `Custom` state
 - Blizzard Settings panel registration (with fallback)
 
@@ -65,6 +69,7 @@ Preset behavior:
 - `/gladtools preset <healer|dps>` - apply preset
 - `/gladtools resetpreset` - reset to selected preset
 - `/gladtools pointers <off|all|healers>` - pointer mode
+- `/gladtools snapshot` - print a live tracker snapshot in chat
 - `/gladtools state` - show current preset state
 - `/gladtools help` - command list
 

@@ -41,11 +41,33 @@ UnitFrames.DR_COLORS = {
 }
 
 local DEFAULT_CATEGORY_COLOR = { 0.70, 0.70, 0.74 }
+local CLASS_ICON_FILE = "Interface/GLUES/CHARACTERCREATE/UI-CHARACTERCREATE-CLASSES"
+
+UnitFrames.ROLE_LABELS = {
+    HEALER = "HEAL",
+    TANK = "TANK",
+    DAMAGER = "DPS",
+}
+
+UnitFrames.ROLE_COLORS = {
+    HEALER = { 0.26, 0.94, 0.56 },
+    TANK = { 0.56, 0.72, 0.92 },
+    DAMAGER = { 0.96, 0.44, 0.32 },
+}
 
 local function setTextureColor(texture, r, g, b, a)
     if texture and texture.SetVertexColor then
         texture:SetVertexColor(r, g, b, a or 1)
     end
+end
+
+local function toTitleToken(value)
+    if type(value) ~= "string" or value == "" then
+        return "Unknown"
+    end
+
+    local lowered = string.lower(value)
+    return string.upper(lowered:sub(1, 1)) .. lowered:sub(2)
 end
 
 local function setBackdrop(frame, fancy)
@@ -69,6 +91,9 @@ local function setBackdrop(frame, fancy)
             insets = { left = 3, right = 3, top = 3, bottom = 3 },
         })
         frame:SetBackdropColor(0.03, 0.03, 0.04, 0.86)
+        if frame.SetBackdropBorderColor then
+            frame:SetBackdropBorderColor(0.42, 0.42, 0.46, 0.98)
+        end
     else
         frame:SetBackdrop({
             bgFile = "Interface/Buttons/WHITE8x8",
@@ -79,6 +104,10 @@ local function setBackdrop(frame, fancy)
         if frame.SetBackdropBorderColor then
             frame:SetBackdropBorderColor(0.18, 0.18, 0.20, 0.95)
         end
+    end
+
+    if frame.innerGlow then
+        setTextureColor(frame.innerGlow, 1, 1, 1, fancy and 0.045 or 0.015)
     end
 end
 
@@ -234,6 +263,11 @@ function UnitFrames:CreateUnitFrame(groupName, unit, index)
     frame.bg:SetTexture("Interface/Buttons/WHITE8x8")
     setTextureColor(frame.bg, 0.02, 0.02, 0.03, 0.68)
 
+    frame.innerGlow = frame:CreateTexture(nil, "ARTWORK")
+    frame.innerGlow:SetAllPoints(frame)
+    frame.innerGlow:SetTexture("Interface/Buttons/WHITE8x8")
+    setTextureColor(frame.innerGlow, 1, 1, 1, 0.04)
+
     frame.topAccent = frame:CreateTexture(nil, "BORDER")
     frame.topAccent:SetTexture("Interface/Buttons/WHITE8x8")
     frame.topAccent:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
@@ -241,9 +275,27 @@ function UnitFrames:CreateUnitFrame(groupName, unit, index)
     frame.topAccent:SetHeight(2)
     setTextureColor(frame.topAccent, 0.45, 0.45, 0.48, 0.95)
 
+    frame.leftAccent = frame:CreateTexture(nil, "BORDER")
+    frame.leftAccent:SetTexture("Interface/Buttons/WHITE8x8")
+    frame.leftAccent:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
+    frame.leftAccent:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 1)
+    frame.leftAccent:SetWidth(2)
+    setTextureColor(frame.leftAccent, 0.45, 0.45, 0.48, 0.88)
+
+    frame.classIconBG = frame:CreateTexture(nil, "BORDER")
+    frame.classIconBG:SetTexture("Interface/Buttons/WHITE8x8")
+    frame.classIconBG:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -7)
+    frame.classIconBG:SetSize(20, 20)
+    setTextureColor(frame.classIconBG, 0.02, 0.02, 0.03, 0.90)
+
+    frame.classIcon = frame:CreateTexture(nil, "ARTWORK")
+    frame.classIcon:SetPoint("TOPLEFT", frame.classIconBG, "TOPLEFT", 1, -1)
+    frame.classIcon:SetPoint("BOTTOMRIGHT", frame.classIconBG, "BOTTOMRIGHT", -1, 1)
+    frame.classIcon:SetTexture(134400)
+
     frame.nameText = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    frame.nameText:SetPoint("TOPLEFT", 10, -7)
-    frame.nameText:SetWidth(width - 118)
+    frame.nameText:SetPoint("TOPLEFT", frame.classIconBG, "TOPRIGHT", 6, -1)
+    frame.nameText:SetWidth(width - 166)
     frame.nameText:SetJustifyH("LEFT")
     if frame.nameText.SetShadowOffset then
         frame.nameText:SetShadowOffset(1, -1)
@@ -252,10 +304,21 @@ function UnitFrames:CreateUnitFrame(groupName, unit, index)
         frame.nameText:SetShadowColor(0, 0, 0, 1)
     end
 
+    frame.statusTag = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    frame.statusTag:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -40, -8)
+    frame.statusTag:SetJustifyH("RIGHT")
+    frame.statusTag:SetTextColor(0.92, 0.92, 0.96)
+
+    frame.detailText = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    frame.detailText:SetPoint("TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -1)
+    frame.detailText:SetWidth(width - 126)
+    frame.detailText:SetJustifyH("LEFT")
+    frame.detailText:SetTextColor(0.72, 0.76, 0.84)
+
     frame.healthBarBG = frame:CreateTexture(nil, "ARTWORK")
     frame.healthBarBG:SetTexture("Interface/Buttons/WHITE8x8")
-    frame.healthBarBG:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -22)
-    frame.healthBarBG:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -40, -22)
+    frame.healthBarBG:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -23)
+    frame.healthBarBG:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -40, -23)
     frame.healthBarBG:SetHeight(groupName == "near" and 12 or 14)
     setTextureColor(frame.healthBarBG, 0.08, 0.08, 0.09, 0.92)
 
@@ -265,6 +328,11 @@ function UnitFrames:CreateUnitFrame(groupName, unit, index)
     frame.healthBar:SetPoint("BOTTOMRIGHT", frame.healthBarBG, "BOTTOMRIGHT", -1, 1)
     frame.healthBar:SetMinMaxValues(0, 1)
     frame.healthBar:SetValue(1)
+
+    frame.healthBarOverlay = frame.healthBar:CreateTexture(nil, "OVERLAY")
+    frame.healthBarOverlay:SetAllPoints(frame.healthBar)
+    frame.healthBarOverlay:SetTexture("Interface/Buttons/WHITE8x8")
+    setTextureColor(frame.healthBarOverlay, 1, 1, 1, 0.06)
 
     frame.healthValue = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     frame.healthValue:SetPoint("RIGHT", frame.healthBarBG, "RIGHT", -3, 0)
@@ -276,6 +344,12 @@ function UnitFrames:CreateUnitFrame(groupName, unit, index)
     frame.cooldownRow:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -8, -40)
     frame.cooldownRow:SetHeight(24)
     frame.cooldownIcons = {}
+
+    frame.cooldownSummary = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    frame.cooldownSummary:SetPoint("RIGHT", frame.cooldownRow, "RIGHT", 0, 0)
+    frame.cooldownSummary:SetWidth(96)
+    frame.cooldownSummary:SetJustifyH("RIGHT")
+    frame.cooldownSummary:SetTextColor(0.76, 0.80, 0.90)
 
     frame.trinketIcon = createIcon(frame)
     frame.trinketIcon:SetSize(22, 22)
@@ -388,6 +462,104 @@ function UnitFrames:GetFrameStyle(frame)
     return styleSettings.fancy and true or false
 end
 
+function UnitFrames:GetUnitShortLabel(unit)
+    if type(unit) ~= "string" then
+        return "UNIT"
+    end
+
+    local arenaIndex = unit:match("^arena(%d)$")
+    if arenaIndex then
+        return "A" .. arenaIndex
+    end
+
+    local partyIndex = unit:match("^party(%d)$")
+    if partyIndex then
+        return "P" .. partyIndex
+    end
+
+    if unit == "player" then
+        return "YOU"
+    elseif unit == "target" then
+        return "TGT"
+    elseif unit == "focus" then
+        return "FOC"
+    end
+
+    return string.upper(unit:sub(1, 3))
+end
+
+function UnitFrames:GetRoleForUnit(unit)
+    if not UnitGroupRolesAssigned then
+        return "DAMAGER"
+    end
+
+    local role = UnitGroupRolesAssigned(unit)
+    if role == "HEALER" or role == "TANK" then
+        return role
+    end
+
+    return "DAMAGER"
+end
+
+function UnitFrames:GetRoleLabelAndColor(unit)
+    local role = self:GetRoleForUnit(unit)
+    local label = self.ROLE_LABELS[role] or "DPS"
+    local color = self.ROLE_COLORS[role] or self.ROLE_COLORS.DAMAGER
+    return label, color[1], color[2], color[3]
+end
+
+function UnitFrames:SetClassIcon(frame, classFile)
+    if not frame or not frame.classIcon then
+        return
+    end
+
+    frame.classIcon:SetTexture(CLASS_ICON_FILE)
+
+    local coords = CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[classFile or ""]
+    if coords and frame.classIcon.SetTexCoord then
+        frame.classIcon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+    elseif frame.classIcon.SetTexCoord then
+        frame.classIcon:SetTexCoord(0, 1, 0, 1)
+        frame.classIcon:SetTexture(134400)
+    end
+end
+
+function UnitFrames:UpdateStatusTag(frame, healthPercent)
+    if not frame or not frame.statusTag then
+        return
+    end
+
+    local label = self:GetUnitShortLabel(frame.unit)
+    local r, g, b = 0.92, 0.92, 0.96
+
+    local isConnected = true
+    if UnitIsConnected then
+        isConnected = UnitIsConnected(frame.unit) and true or false
+    end
+
+    if not isConnected then
+        label = "OFF"
+        r, g, b = 0.72, 0.72, 0.76
+    elseif UnitIsDeadOrGhost and UnitIsDeadOrGhost(frame.unit) then
+        label = "DEAD"
+        r, g, b = 0.92, 0.32, 0.32
+    elseif UnitIsUnit and UnitIsUnit("target", frame.unit) then
+        label = "TARGET"
+        r, g, b = 0.96, 0.82, 0.32
+    elseif UnitIsUnit and UnitIsUnit("focus", frame.unit) then
+        label = "FOCUS"
+        r, g, b = 0.60, 0.78, 0.96
+    elseif frame.groupName == "near" then
+        label = "NEAR"
+        r, g, b = 0.38, 0.88, 0.56
+    elseif healthPercent <= 35 then
+        r, g, b = 0.98, 0.44, 0.38
+    end
+
+    frame.statusTag:SetText(label)
+    frame.statusTag:SetTextColor(r, g, b)
+end
+
 function UnitFrames:ApplyFrameChrome(frame, classFile, fancy)
     local r, g, b = GT:GetClassColor(classFile)
     if not fancy then
@@ -395,6 +567,9 @@ function UnitFrames:ApplyFrameChrome(frame, classFile, fancy)
     end
 
     setTextureColor(frame.topAccent, r, g, b, fancy and 0.95 or 0.70)
+    setTextureColor(frame.leftAccent, r, g, b, fancy and 0.92 or 0.60)
+    setTextureColor(frame.innerGlow, r, g, b, fancy and 0.05 or 0.02)
+    setTextureColor(frame.classIconBG, r * 0.20, g * 0.20, b * 0.20, fancy and 0.85 or 0.70)
 
     if frame.SetBackdropBorderColor then
         frame:SetBackdropBorderColor(
@@ -422,6 +597,9 @@ end
 
 function UnitFrames:HideCooldownIcons(frame)
     frame.cooldownRow:Hide()
+    frame.cooldownSummary:SetText("")
+    frame._cooldownCount = 0
+    frame._cooldownNext = nil
     for _, icon in ipairs(frame.cooldownIcons) do
         icon:Hide()
     end
@@ -449,6 +627,30 @@ function UnitFrames:UpdateCooldownRow(frame, guid)
 
     local entries = guid and GT.CooldownTracker:GetUnitCooldowns(guid) or {}
     local now = GetTime and GetTime() or 0
+    frame._cooldownCount = #entries
+    frame._cooldownNext = nil
+
+    if entries[1] then
+        frame._cooldownNext = math.max(0, entries[1].endTime - now)
+    end
+
+    if #entries == 0 then
+        frame.cooldownSummary:SetText("CD ready")
+        frame.cooldownSummary:SetTextColor(0.46, 0.88, 0.62)
+    else
+        local nextText = frame._cooldownNext and GT:FormatRemaining(frame._cooldownNext) or ""
+        if nextText ~= "" then
+            frame.cooldownSummary:SetText(string.format("CD %d  %s", #entries, nextText))
+        else
+            frame.cooldownSummary:SetText(string.format("CD %d", #entries))
+        end
+
+        if frame._cooldownNext and frame._cooldownNext <= 6 then
+            frame.cooldownSummary:SetTextColor(1, 0.80, 0.30)
+        else
+            frame.cooldownSummary:SetTextColor(0.80, 0.84, 0.94)
+        end
+    end
 
     for index = 1, maxIcons do
         local icon = frame.cooldownIcons[index]
@@ -488,6 +690,8 @@ function UnitFrames:UpdateCooldownRow(frame, guid)
 end
 
 function UnitFrames:UpdateTrinket(frame, guid)
+    frame._trinketRemaining = nil
+
     if frame.groupName ~= "enemy" and frame.groupName ~= "friendly" then
         frame.trinketIcon:Hide()
         return
@@ -511,6 +715,8 @@ function UnitFrames:UpdateTrinket(frame, guid)
         frame.trinketIcon:Hide()
         return
     end
+
+    frame._trinketRemaining = remaining
 
     frame.trinketIcon.texture:SetTexture(trinketEntry.icon or 132344)
     frame.trinketIcon.timerText:SetText(GT:FormatRemaining(remaining))
@@ -539,6 +745,7 @@ function UnitFrames:UpdateHealthAndName(frame)
 
     frame.nameText:SetText(name or frame.unit)
     frame.nameText:SetTextColor(r, g, b)
+    self:SetClassIcon(frame, classFile)
 
     local health = UnitHealth and UnitHealth(frame.unit) or 0
     local maxHealth = UnitHealthMax and UnitHealthMax(frame.unit) or 1
@@ -556,7 +763,8 @@ function UnitFrames:UpdateHealthAndName(frame)
     elseif percent > 100 then
         percent = 100
     end
-    frame.healthValue:SetText(string.format("%d%%", percent))
+
+    frame.healthValue:SetText(string.format("%d%%  %s/%s", percent, GT:FormatCompactNumber(health), GT:FormatCompactNumber(maxHealth)))
     if percent <= 35 then
         frame.healthValue:SetTextColor(1, 0.35, 0.35)
     elseif percent <= 60 then
@@ -565,7 +773,40 @@ function UnitFrames:UpdateHealthAndName(frame)
         frame.healthValue:SetTextColor(0.95, 0.95, 0.98)
     end
 
-    return classFile
+    self:UpdateStatusTag(frame, percent)
+    return classFile, health, maxHealth, percent
+end
+
+function UnitFrames:UpdateDetailText(frame, classFile, guid)
+    if not frame.detailText then
+        return
+    end
+
+    local roleLabel, roleR, roleG, roleB = self:GetRoleLabelAndColor(frame.unit)
+    local classLabel = toTitleToken(classFile)
+
+    local cdPart = "CD ready"
+    if frame._cooldownCount and frame._cooldownCount > 0 then
+        local nextText = frame._cooldownNext and GT:FormatRemaining(frame._cooldownNext) or ""
+        if nextText ~= "" then
+            cdPart = string.format("CD %d (%s)", frame._cooldownCount, nextText)
+        else
+            cdPart = string.format("CD %d", frame._cooldownCount)
+        end
+    end
+
+    local trinketPart = "Trinket ready"
+    if frame._trinketRemaining and frame._trinketRemaining > 0 then
+        trinketPart = "Trinket " .. GT:FormatRemaining(frame._trinketRemaining)
+    end
+
+    local unitPart = string.format("%s %s", self:GetUnitShortLabel(frame.unit), roleLabel)
+    if guid and frame.groupName == "enemy" then
+        unitPart = unitPart .. " " .. (guid:sub(-5) or "")
+    end
+
+    frame.detailText:SetText(string.format("%s %s | %s | %s", unitPart, classLabel, cdPart, trinketPart))
+    frame.detailText:SetTextColor(roleR, roleG, roleB)
 end
 
 function UnitFrames:EnsureDRBadgeCount(frame, count)
@@ -663,6 +904,7 @@ function UnitFrames:UpdateFrame(frame)
 
     self:UpdateCooldownRow(frame, guid)
     self:UpdateTrinket(frame, guid)
+    self:UpdateDetailText(frame, classFile, guid)
     self:UpdateDR(frame, guid)
 end
 
@@ -672,6 +914,24 @@ function UnitFrames:UpdateAll()
             self:UpdateFrame(frame)
         end
     end
+end
+
+function UnitFrames:GetVisibleGroupCounts()
+    local counts = {
+        enemy = 0,
+        friendly = 0,
+        near = 0,
+    }
+
+    for groupName, groupFrames in pairs(self.frames or {}) do
+        for _, frame in ipairs(groupFrames) do
+            if frame.IsShown and frame:IsShown() then
+                counts[groupName] = (counts[groupName] or 0) + 1
+            end
+        end
+    end
+
+    return counts
 end
 
 function UnitFrames:OnUpdate(elapsed)

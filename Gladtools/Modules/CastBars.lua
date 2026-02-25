@@ -35,6 +35,9 @@ local function applyBarColor(bar, color, borderAlpha)
 
     bar.statusBar:SetStatusBarColor(r, g, b, 0.95)
     setTextureColor(bar.statusBG, (r * 0.20) + 0.05, (g * 0.20) + 0.05, (b * 0.20) + 0.05, 0.95)
+    if bar.topAccent then
+        setTextureColor(bar.topAccent, r, g, b, 0.95)
+    end
 
     if bar.SetBackdropBorderColor then
         bar:SetBackdropBorderColor((r * 0.46) + 0.10, (g * 0.46) + 0.10, (b * 0.46) + 0.10, borderAlpha or 0.95)
@@ -76,6 +79,13 @@ local function createCastBar(unit)
     frame.statusBG:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -2, 2)
     setTextureColor(frame.statusBG, 0.09, 0.09, 0.10, 0.95)
 
+    frame.topAccent = frame:CreateTexture(nil, "BORDER")
+    frame.topAccent:SetTexture("Interface/Buttons/WHITE8x8")
+    frame.topAccent:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
+    frame.topAccent:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -1, -1)
+    frame.topAccent:SetHeight(2)
+    setTextureColor(frame.topAccent, 0.58, 0.58, 0.62, 0.95)
+
     frame.statusBar = CreateFrame("StatusBar", nil, frame)
     frame.statusBar:SetStatusBarTexture("Interface/Buttons/WHITE8x8")
     frame.statusBar:SetPoint("TOPLEFT", frame.statusBG, "TOPLEFT", 0, 0)
@@ -83,8 +93,20 @@ local function createCastBar(unit)
     frame.statusBar:SetMinMaxValues(0, 1)
     frame.statusBar:SetValue(0)
 
+    frame.spark = frame.statusBar:CreateTexture(nil, "OVERLAY")
+    frame.spark:SetTexture("Interface/Buttons/WHITE8x8")
+    frame.spark:SetSize(2, 18)
+    setTextureColor(frame.spark, 1, 1, 1, 0.72)
+
+    frame.unitText = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    frame.unitText:SetPoint("LEFT", frame.statusBar, "LEFT", 4, 0)
+    frame.unitText:SetWidth(30)
+    frame.unitText:SetJustifyH("LEFT")
+    frame.unitText:SetTextColor(0.78, 0.82, 0.92)
+    frame.unitText:SetText("")
+
     frame.spellText = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    frame.spellText:SetPoint("LEFT", frame.statusBar, "LEFT", 4, 0)
+    frame.spellText:SetPoint("LEFT", frame.statusBar, "LEFT", 34, 0)
     frame.spellText:SetPoint("RIGHT", frame.statusBar, "RIGHT", -48, 0)
     frame.spellText:SetJustifyH("LEFT")
     if frame.spellText.SetShadowOffset then
@@ -119,6 +141,25 @@ end
 
 local function isArenaUnit(unit)
     return unit and unit:match("^arena%d$") ~= nil
+end
+
+local function getUnitLabel(unit)
+    if type(unit) ~= "string" then
+        return "UNIT"
+    end
+
+    local arenaIndex = unit:match("^arena(%d)$")
+    if arenaIndex then
+        return "A" .. arenaIndex
+    end
+
+    if unit == "target" then
+        return "TGT"
+    elseif unit == "focus" then
+        return "FOC"
+    end
+
+    return string.upper(unit:sub(1, 3))
 end
 
 function CastBars:Init()
@@ -235,15 +276,24 @@ function CastBars:StartCast(unit, isChannel)
     end
     applyBarColor(bar, color)
 
-    if bar.interruptible then
-        bar.flagText:SetText("")
-    else
+    bar.unitText:SetText(getUnitLabel(unit))
+
+    if not bar.interruptible then
         bar.flagText:SetText("NI")
         bar.flagText:SetTextColor(0.92, 0.92, 0.92)
+    elseif bar.isChannel then
+        bar.flagText:SetText("CH")
+        bar.flagText:SetTextColor(0.58, 0.84, 1.00)
+    else
+        bar.flagText:SetText("CS")
+        bar.flagText:SetTextColor(0.98, 0.80, 0.34)
     end
 
     bar.spellText:SetText(name)
     bar.timeText:SetText(GT:FormatRemaining(duration))
+    if bar.spark and bar.spark.Show then
+        bar.spark:Show()
+    end
     if bar.SetAlpha then
         bar:SetAlpha(1)
     end
@@ -262,9 +312,13 @@ function CastBars:StopCast(unit, text, r, g, b)
         bar.spellText:SetText(text)
         bar.timeText:SetText("")
         bar.flagText:SetText("")
+        bar.unitText:SetText(getUnitLabel(unit))
         applyBarColor(bar, { r or 0.8, g or 0.2, b or 0.2 }, 1)
         bar.stopAt = (GetTime and GetTime() or 0) + 0.65
         bar.isActive = false
+        if bar.spark and bar.spark.Hide then
+            bar.spark:Hide()
+        end
         if bar.SetAlpha then
             bar:SetAlpha(1)
         end
@@ -274,6 +328,9 @@ function CastBars:StopCast(unit, text, r, g, b)
 
     bar.isActive = false
     bar.stopAt = nil
+    if bar.spark and bar.spark.Hide then
+        bar.spark:Hide()
+    end
     if bar.SetAlpha then
         bar:SetAlpha(1)
     end
@@ -294,11 +351,28 @@ function CastBars:UpdateActiveBar(bar, now)
             bar.statusBar:SetValue(bar.duration - remaining)
         end
 
+        if bar.spark and bar.statusBar and bar.statusBar.GetWidth then
+            local duration = math.max(0.01, bar.duration or 0.01)
+            local value = bar.isChannel and remaining or (duration - remaining)
+            local progress = math.max(0, math.min(1, value / duration))
+            local xOffset = math.floor((bar.statusBar:GetWidth() or 0) * progress)
+            if bar.spark.ClearAllPoints then
+                bar.spark:ClearAllPoints()
+            end
+            bar.spark:SetPoint("CENTER", bar.statusBar, "LEFT", xOffset, 0)
+            if bar.spark.Show then
+                bar.spark:Show()
+            end
+        end
+
         bar.timeText:SetText(GT:FormatRemaining(remaining))
     elseif bar.stopAt then
         local fadeRemaining = bar.stopAt - now
         if fadeRemaining <= 0 then
             bar.stopAt = nil
+            if bar.spark and bar.spark.Hide then
+                bar.spark:Hide()
+            end
             if bar.SetAlpha then
                 bar:SetAlpha(1)
             end
@@ -334,11 +408,24 @@ function CastBars:OnSettingsChanged()
             bar:Hide()
             bar.isActive = false
             bar.stopAt = nil
+            if bar.spark and bar.spark.Hide then
+                bar.spark:Hide()
+            end
             if bar.SetAlpha then
                 bar:SetAlpha(1)
             end
         end
     end
+end
+
+function CastBars:GetActiveCount()
+    local count = 0
+    for _, bar in pairs(self.bars or {}) do
+        if bar.isActive and bar.IsShown and bar:IsShown() then
+            count = count + 1
+        end
+    end
+    return count
 end
 
 function CastBars:HandleEvent(event, arg1)
