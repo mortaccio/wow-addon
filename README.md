@@ -20,6 +20,7 @@ Retail World of Warcraft Arena PvP addon with modular tracking for cooldowns, tr
 - Top-of-screen burst alerts when your healer is in hard CC and enemies press offensive cooldowns
 - Enemy "CC on you" cast-start warnings at top of screen
 - Enhanced player nameplates: arena labels, healer icon, class-color HP, large CC debuffs (right), your debuffs (top), and plate cast bars
+- Optional nameplate cooldown strip (tracked cooldowns + trinket timer icons) with numeric timers
 - Cooldown tracking now uses Blizzard APIs where available (`C_Spell` / `GetSpellBaseCooldown`) with normalized spec-aware fallback data
 - Nameplate and healer-CC debuff timers now reconcile against live aura durations when unit aura data is available
 - Expanded normalized cooldown and DR datasets for stronger live arena coverage
@@ -35,6 +36,7 @@ Gladtools/
   Utils.lua
   Config.lua
   CooldownData.lua
+  DRData.lua
   Main.lua
   Modules/
     UnitMap.lua
@@ -47,6 +49,8 @@ Gladtools/
     CastBars.lua
     PointerSystem.lua
     SettingsUI.lua
+tools/
+  sync_pvp_data.py
 ```
 
 ## Installation
@@ -124,6 +128,26 @@ Each spell entry includes:
 - `category`
 - `icon`
 - `priority`
+
+`DRData.lua` provides normalized Retail DR spell coverage:
+- `spellToCategory` (`stun` / `incap` / `fear` / `silence` / `root` / etc.)
+- `resetSeconds` (Retail defaults from DRList)
+- `diminished` chains (category-specific)
+
+## Data Sources (2026-02-25 snapshot)
+
+- Cooldowns/trinkets/racials: OmniCD Retail `Spells_Mainline.lua`
+- DR categories: DRList-1.0 Retail `Spells.lua`
+
+To refresh datasets from newer snapshots:
+
+```bash
+python3 tools/sync_pvp_data.py \
+  --omnicd /path/to/Spells_Mainline.lua \
+  --drlist /path/to/DRList-1.0/Spells.lua \
+  --outdir Gladtools \
+  --as-of YYYY-MM-DD
+```
 
 ## TODO (Competitive 3v3)
 

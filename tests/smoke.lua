@@ -197,6 +197,7 @@ local files = {
     "Gladtools/Utils.lua",
     "Gladtools/Config.lua",
     "Gladtools/CooldownData.lua",
+    "Gladtools/DRData.lua",
     "Gladtools/Modules/UnitMap.lua",
     "Gladtools/Modules/CooldownTracker.lua",
     "Gladtools/Modules/TrinketTracker.lua",

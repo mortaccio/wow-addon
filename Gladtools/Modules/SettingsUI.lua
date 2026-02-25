@@ -260,6 +260,10 @@ function SettingsUI:CreatePanel()
         GT:SetSetting({ "nameplates", "showFriendly" }, value, "settings_ui")
     end)
 
+    self.controls.showPlateCooldowns = GT:CreateBasicCheckbox(panel, "Show cooldown strips on nameplates", 20, -526, function(value)
+        GT:SetSetting({ "nameplates", "showCooldowns" }, value, "settings_ui")
+    end)
+
     createSectionHeader(panel, "Display", 460, -76)
 
     self.controls.pointerModeButton = createButton(panel, "Pointer Mode", 460, -104, 220, function()
@@ -391,6 +395,7 @@ function SettingsUI:RefreshControls()
     local plateSettings = settings.nameplates or {}
     self.controls.enableNameplates:SetChecked(plateSettings.enabled ~= false)
     self.controls.showFriendlyPlates:SetChecked(plateSettings.showFriendly and true or false)
+    self.controls.showPlateCooldowns:SetChecked(plateSettings.showCooldowns ~= false)
 
     local pointerMode = settings.pointers.mode or GT.POINTER_MODES.OFF
     local pointerLabel = GT.POINTER_MODE_LABELS[pointerMode] or pointerMode

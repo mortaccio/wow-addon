@@ -9,6 +9,7 @@ Init.lua
 Utils.lua
 Config.lua
 CooldownData.lua
+DRData.lua
 
 Modules/UnitMap.lua
 Modules/CooldownTracker.lua

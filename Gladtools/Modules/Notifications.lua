@@ -27,6 +27,18 @@ Notifications.CC_ON_YOU_CATEGORIES = {
     root = true,
 }
 
+Notifications.BURST_RACIALS = {
+    [20572] = true, -- Blood Fury
+    [26297] = true, -- Berserking
+    [265221] = true, -- Fireblood
+    [274738] = true, -- Ancestral Call
+    [436344] = true, -- Azerite Surge
+}
+
+Notifications.BURST_TRINKETS = {
+    [345228] = true, -- Gladiator's Badge
+}
+
 local function getNow()
     if GetTime then
         return GetTime()
@@ -474,11 +486,19 @@ function Notifications:IsBurstEntry(entry)
         return false
     end
 
-    if entry.category ~= "offensive" then
-        return false
+    if entry.category == "offensive" then
+        return (entry.priority or 0) >= self.BURST_PRIORITY_MIN
     end
 
-    return (entry.priority or 0) >= self.BURST_PRIORITY_MIN
+    if entry.category == "racial" then
+        return self.BURST_RACIALS[entry.spellID] and true or false
+    end
+
+    if entry.category == "trinket" then
+        return self.BURST_TRINKETS[entry.spellID] and true or false
+    end
+
+    return false
 end
 
 function Notifications:ShouldNotifyBurst(sourceGUID, spellID)

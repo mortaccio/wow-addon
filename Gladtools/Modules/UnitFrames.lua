@@ -30,6 +30,7 @@ UnitFrames.CATEGORY_COLORS = {
     utility = { 0.85, 0.70, 0.24 },
     interrupt = { 0.96, 0.52, 0.14 },
     trinket = { 0.90, 0.58, 0.18 },
+    racial = { 0.62, 0.74, 0.96 },
 }
 
 UnitFrames.DR_COLORS = {
@@ -38,6 +39,9 @@ UnitFrames.DR_COLORS = {
     fear = { 0.70, 0.40, 0.90 },
     silence = { 0.46, 0.62, 0.98 },
     root = { 0.38, 0.82, 0.48 },
+    disarm = { 0.94, 0.56, 0.22 },
+    taunt = { 0.86, 0.72, 0.34 },
+    knockback = { 0.40, 0.90, 0.90 },
 }
 
 local DEFAULT_CATEGORY_COLOR = { 0.70, 0.70, 0.74 }
@@ -183,6 +187,30 @@ local function createIcon(parent)
     end
 
     applyIconColor(icon, DEFAULT_CATEGORY_COLOR[1], DEFAULT_CATEGORY_COLOR[2], DEFAULT_CATEGORY_COLOR[3])
+
+    icon:SetScript("OnEnter", function(self)
+        if not GameTooltip then
+            return
+        end
+
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        if self.spellID and GameTooltip.SetSpellByID then
+            GameTooltip:SetSpellByID(self.spellID)
+        else
+            GameTooltip:SetText(self.spellName or "Cooldown")
+        end
+
+        if self.remaining and self.remaining > 0 then
+            GameTooltip:AddLine("Remaining: " .. GT:FormatRemaining(self.remaining), 0.86, 0.88, 0.98)
+        end
+        GameTooltip:Show()
+    end)
+
+    icon:SetScript("OnLeave", function()
+        if GameTooltip then
+            GameTooltip:Hide()
+        end
+    end)
 
     icon:Hide()
     return icon
@@ -688,6 +716,9 @@ function UnitFrames:HideCooldownIcons(frame)
     frame._cooldownCount = 0
     frame._cooldownNext = nil
     for _, icon in ipairs(frame.cooldownIcons) do
+        icon.spellID = nil
+        icon.spellName = nil
+        icon.remaining = nil
         icon:Hide()
     end
 end
@@ -746,6 +777,9 @@ function UnitFrames:UpdateCooldownRow(frame, guid)
 
         if entry then
             local remaining = entry.endTime - now
+            icon.spellID = entry.spellID
+            icon.spellName = entry.spellName
+            icon.remaining = remaining
             icon.texture:SetTexture(entry.icon or 134400)
             icon.timerText:SetText(GT:FormatRemaining(remaining))
 
@@ -768,6 +802,9 @@ function UnitFrames:UpdateCooldownRow(frame, guid)
 
             icon:Show()
         else
+            icon.spellID = nil
+            icon.spellName = nil
+            icon.remaining = nil
             icon:Hide()
         end
     end
@@ -781,18 +818,27 @@ function UnitFrames:UpdateTrinket(frame, guid)
     frame._trinketRemaining = nil
 
     if frame.groupName ~= "enemy" and frame.groupName ~= "friendly" then
+        frame.trinketIcon.spellID = nil
+        frame.trinketIcon.spellName = nil
+        frame.trinketIcon.remaining = nil
         frame.trinketIcon:Hide()
         return
     end
 
     local trinketEnabled = GT:GetSetting({ "trinkets", "enabled" })
     if not trinketEnabled then
+        frame.trinketIcon.spellID = nil
+        frame.trinketIcon.spellName = nil
+        frame.trinketIcon.remaining = nil
         frame.trinketIcon:Hide()
         return
     end
 
     local trinketEntry = guid and GT.TrinketTracker:GetPrimaryTrinket(guid) or nil
     if not trinketEntry then
+        frame.trinketIcon.spellID = nil
+        frame.trinketIcon.spellName = nil
+        frame.trinketIcon.remaining = nil
         frame.trinketIcon:Hide()
         return
     end
@@ -800,6 +846,9 @@ function UnitFrames:UpdateTrinket(frame, guid)
     local now = GetTime and GetTime() or 0
     local remaining = trinketEntry.endTime - now
     if remaining <= 0 then
+        frame.trinketIcon.spellID = nil
+        frame.trinketIcon.spellName = nil
+        frame.trinketIcon.remaining = nil
         frame.trinketIcon:Hide()
         return
     end
@@ -807,6 +856,9 @@ function UnitFrames:UpdateTrinket(frame, guid)
     frame._trinketRemaining = remaining
 
     frame.trinketIcon.texture:SetTexture(trinketEntry.icon or 132344)
+    frame.trinketIcon.spellID = trinketEntry.spellID
+    frame.trinketIcon.spellName = trinketEntry.spellName
+    frame.trinketIcon.remaining = remaining
     frame.trinketIcon.timerText:SetText(GT:FormatRemaining(remaining))
     if remaining <= 10 then
         frame.trinketIcon.timerText:SetTextColor(1, 0.80, 0.25)

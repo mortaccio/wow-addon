@@ -8,6 +8,7 @@ NameplateOverlays.UPDATE_INTERVAL = 0.05
 NameplateOverlays.PURGE_INTERVAL = 1.0
 NameplateOverlays.CC_FALLBACK_DURATION = 8
 NameplateOverlays.PLAYER_DEBUFF_FALLBACK_DURATION = 12
+NameplateOverlays.MAX_PLATE_COOLDOWNS = 4
 
 NameplateOverlays.CC_CATEGORIES = {
     stun = true,
@@ -202,6 +203,30 @@ local function createAuraIcon(parent, size)
         icon.timerText:SetShadowColor(0, 0, 0, 1)
     end
 
+    icon:SetScript("OnEnter", function(self)
+        if not GameTooltip then
+            return
+        end
+
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        if self.spellID and GameTooltip.SetSpellByID then
+            GameTooltip:SetSpellByID(self.spellID)
+        else
+            GameTooltip:SetText(self.spellName or "Aura")
+        end
+
+        if self.remaining and self.remaining > 0 then
+            GameTooltip:AddLine("Remaining: " .. GT:FormatRemaining(self.remaining), 0.86, 0.88, 0.98)
+        end
+        GameTooltip:Show()
+    end)
+
+    icon:SetScript("OnLeave", function()
+        if GameTooltip then
+            GameTooltip:Hide()
+        end
+    end)
+
     icon:Hide()
     return icon
 end
@@ -342,6 +367,11 @@ function NameplateOverlays:CreateOverlay(nameplate)
     overlay.playerDebuffAnchor:SetSize(120, 16)
     overlay.playerDebuffIcons = {}
 
+    overlay.cooldownAnchor = CreateFrame("Frame", nil, overlay)
+    overlay.cooldownAnchor:SetPoint("TOPLEFT", overlay, "BOTTOMLEFT", 0, -6)
+    overlay.cooldownAnchor:SetSize(150, 16)
+    overlay.cooldownIcons = {}
+
     overlay.castBar = createPlateCastBar(overlay)
     return overlay
 end
@@ -373,6 +403,9 @@ function NameplateOverlays:HideAuraIcons(list)
         return
     end
     for _, icon in ipairs(list) do
+        icon.spellID = nil
+        icon.spellName = nil
+        icon.remaining = nil
         icon:Hide()
     end
 end
@@ -393,6 +426,7 @@ function NameplateOverlays:HideOverlay(overlay)
     end
     self:HideAuraIcons(overlay.ccIcons)
     self:HideAuraIcons(overlay.playerDebuffIcons)
+    self:HideAuraIcons(overlay.cooldownIcons)
     overlay:Hide()
 end
 
@@ -668,8 +702,11 @@ function NameplateOverlays:PurgeExpiredAuras()
 end
 
 function NameplateOverlays:UpdateAuraIcon(icon, entry, now, r, g, b)
+    icon.spellID = entry.spellID
+    icon.spellName = entry.spellName
     icon.texture:SetTexture(entry.icon or 134400)
     local remaining = entry.expiresAt and (entry.expiresAt - now) or 0
+    icon.remaining = remaining
     icon.timerText:SetText(GT:FormatRemaining(remaining))
 
     if icon.SetBackdropBorderColor then
@@ -683,6 +720,137 @@ function NameplateOverlays:UpdateAuraIcon(icon, entry, now, r, g, b)
     end
 
     icon:Show()
+end
+
+function NameplateOverlays:ShouldShowPlateCooldowns(isFriendly)
+    local settings = self:GetSettings()
+    if settings.showCooldowns == false then
+        return false
+    end
+
+    local cooldownSettings = GT:GetSetting({ "unitFrames", "cooldowns" }) or {}
+    if cooldownSettings.enabled == false then
+        return false
+    end
+
+    if isFriendly then
+        return cooldownSettings.showFriendly ~= false
+    end
+
+    return cooldownSettings.showEnemy ~= false
+end
+
+function NameplateOverlays:CollectPlateCooldowns(guid)
+    if not guid then
+        return {}
+    end
+
+    local list = {}
+    local now = getNow()
+
+    local cooldowns = GT.CooldownTracker and GT.CooldownTracker.GetUnitCooldowns and GT.CooldownTracker:GetUnitCooldowns(guid) or {}
+    for _, entry in ipairs(cooldowns) do
+        if entry and entry.endTime and entry.endTime > now then
+            list[#list + 1] = entry
+        end
+    end
+
+    local trinketsEnabled = GT:GetSetting({ "trinkets", "enabled" })
+    if trinketsEnabled then
+        local trinket = GT.TrinketTracker and GT.TrinketTracker.GetPrimaryTrinket and GT.TrinketTracker:GetPrimaryTrinket(guid) or nil
+        if trinket and trinket.endTime and trinket.endTime > now then
+            list[#list + 1] = trinket
+        end
+    end
+
+    table.sort(list, function(a, b)
+        local ap = a.priority or 0
+        local bp = b.priority or 0
+        if ap == bp then
+            return (a.endTime or 0) < (b.endTime or 0)
+        end
+        return ap > bp
+    end)
+
+    return list
+end
+
+function NameplateOverlays:UpdateCooldownIcons(overlay, guid, now, isFriendly)
+    if not self:ShouldShowPlateCooldowns(isFriendly) then
+        self:HideAuraIcons(overlay.cooldownIcons)
+        return
+    end
+
+    local entries = self:CollectPlateCooldowns(guid)
+    if #entries == 0 then
+        self:HideAuraIcons(overlay.cooldownIcons)
+        return
+    end
+
+    local frameCooldownSettings = GT:GetSetting({ "unitFrames", "cooldowns" }) or {}
+    local maxIcons = frameCooldownSettings.maxIcons or self.MAX_PLATE_COOLDOWNS
+    maxIcons = math.max(1, math.min(self.MAX_PLATE_COOLDOWNS, maxIcons))
+
+    local baseSize = frameCooldownSettings.iconSize or 22
+    local iconSize = math.max(12, math.min(16, baseSize - 6))
+
+    local shown = math.min(maxIcons, #entries)
+    self:EnsureIconCount(overlay.cooldownIcons, overlay.cooldownAnchor, shown, iconSize)
+
+    local castBarShown = overlay.castBar and overlay.castBar:IsShown()
+    local anchorFrame = castBarShown and overlay.castBar or overlay
+    local xOffset = castBarShown and 16 or 0
+    local yOffset = castBarShown and -2 or -6
+
+    for index = 1, shown do
+        local icon = overlay.cooldownIcons[index]
+        local entry = entries[index]
+        local remaining = math.max(0, (entry.endTime or now) - now)
+
+        icon:SetSize(iconSize, iconSize)
+        icon:ClearAllPoints()
+        icon:SetPoint("TOPLEFT", anchorFrame, "BOTTOMLEFT", xOffset + ((index - 1) * (iconSize + 2)), yOffset)
+
+        icon.spellID = entry.spellID
+        icon.spellName = entry.spellName
+        icon.remaining = remaining
+        icon.texture:SetTexture(entry.icon or 134400)
+        icon.timerText:SetText(GT:FormatRemaining(remaining))
+
+        if remaining <= 5 then
+            icon.timerText:SetTextColor(1, 0.35, 0.35)
+        elseif remaining <= 15 then
+            icon.timerText:SetTextColor(1, 0.84, 0.34)
+        else
+            icon.timerText:SetTextColor(0.94, 0.95, 1.0)
+        end
+
+        local category = entry.category or "utility"
+        local categoryColor = GT.UnitFrames and GT.UnitFrames.CATEGORY_COLORS and GT.UnitFrames.CATEGORY_COLORS[category]
+        if icon.SetBackdropBorderColor then
+            if categoryColor then
+                icon:SetBackdropBorderColor(categoryColor[1], categoryColor[2], categoryColor[3], 0.95)
+            else
+                icon:SetBackdropBorderColor(0.72, 0.72, 0.76, 0.95)
+            end
+        end
+
+        if CooldownFrame_Set then
+            CooldownFrame_Set(icon.cooldown, entry.startTime or now, entry.duration or 1, true)
+        elseif icon.cooldown.SetCooldown then
+            icon.cooldown:SetCooldown(entry.startTime or now, entry.duration or 1)
+        end
+
+        icon:Show()
+    end
+
+    for index = shown + 1, #overlay.cooldownIcons do
+        local icon = overlay.cooldownIcons[index]
+        icon.spellID = nil
+        icon.spellName = nil
+        icon.remaining = nil
+        icon:Hide()
+    end
 end
 
 function NameplateOverlays:UpdateCCIcons(overlay, guid, now)
@@ -856,6 +1024,7 @@ function NameplateOverlays:UpdateOverlay(unit, overlay, now)
     self:UpdateCCIcons(overlay, guid, now)
     self:UpdatePlayerDebuffIcons(overlay, guid, now, self:IsFriendlyUnit(unit))
     self:UpdateCastBar(overlay, unit, now)
+    self:UpdateCooldownIcons(overlay, guid, now, self:IsFriendlyUnit(unit))
     overlay:Show()
 end
 

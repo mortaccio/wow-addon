@@ -9,6 +9,10 @@ CooldownTracker.DEDUPE_SECONDS = 0.30
 CooldownTracker.DEDUPE_RETENTION = 15.0
 CooldownTracker.MIN_TRACKED_DURATION = 1.5
 CooldownTracker.MAX_TRACKED_DURATION = 3600
+CooldownTracker.CLEU_TRACKED_SUBEVENTS = {
+    SPELL_CAST_SUCCESS = true,
+    SPELL_AURA_APPLIED = true,
+}
 
 local function getSpellNameAndIcon(spellID)
     if C_Spell and C_Spell.GetSpellInfo then
@@ -256,6 +260,7 @@ function CooldownTracker:TrackSpell(sourceGUID, sourceName, sourceFlags, spellID
         spellName = resolvedSpellName,
         icon = resolvedIcon,
         category = entry.category,
+        sourceType = entry.sourceType,
         classFile = classFile,
         specID = sourceSpecID,
         priority = entry.priority or 50,
@@ -358,7 +363,7 @@ function CooldownTracker:HandleCombatLog()
     end
 
     local _, subEvent, _, sourceGUID, sourceName, sourceFlags, _, _, _, _, _, spellID, spellName = CombatLogGetCurrentEventInfo()
-    if subEvent ~= "SPELL_CAST_SUCCESS" then
+    if not self.CLEU_TRACKED_SUBEVENTS[subEvent] then
         return
     end
 

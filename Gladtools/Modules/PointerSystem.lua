@@ -191,6 +191,24 @@ function PointerSystem:ApplyPointerStyle(pointerFrame, unit, isExplicit)
     end
 end
 
+function PointerSystem:CanUseUnitNameplate(unit)
+    if not unit then
+        return false
+    end
+
+    local isFriendly = UnitIsFriend and UnitIsFriend("player", unit)
+    if not isFriendly then
+        return true
+    end
+
+    local settings = GT:GetSetting({ "nameplates" }) or {}
+    if settings.enabled == false then
+        return false
+    end
+
+    return settings.showFriendly and true or false
+end
+
 function PointerSystem:AnchorPointer(pointerFrame, unit, isExplicit)
     local size = GT:GetSetting({ "pointers", "size" }) or 24
     size = math.max(16, math.min(42, size))
@@ -205,7 +223,7 @@ function PointerSystem:AnchorPointer(pointerFrame, unit, isExplicit)
         return true
     end
 
-    if C_NamePlate and C_NamePlate.GetNamePlateForUnit then
+    if self:CanUseUnitNameplate(unit) and C_NamePlate and C_NamePlate.GetNamePlateForUnit then
         local nameplate = C_NamePlate.GetNamePlateForUnit(unit)
         if nameplate then
             pointerFrame:ClearAllPoints()

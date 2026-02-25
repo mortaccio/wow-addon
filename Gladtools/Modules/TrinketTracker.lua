@@ -5,6 +5,8 @@ GT.TrinketTracker = TrinketTracker
 GT:RegisterModule("TrinketTracker", TrinketTracker)
 
 TrinketTracker.PURGE_INTERVAL = 1.0
+TrinketTracker.MIN_TRACKED_DURATION = 1.5
+TrinketTracker.MAX_TRACKED_DURATION = 3600
 
 local function getSpellNameAndIcon(spellID)
     if C_Spell and C_Spell.GetSpellInfo then
@@ -42,8 +44,67 @@ function TrinketTracker:IsEnabled()
     return trinketSettings and trinketSettings.enabled and true or false
 end
 
-function TrinketTracker:GetDuration(entry, spellID)
-    local duration = entry and entry.defaultCD or 0
+function TrinketTracker:IsLocalPlayerGUID(guid)
+    if not guid or not UnitGUID then
+        return false
+    end
+    return UnitGUID("player") == guid
+end
+
+function TrinketTracker:GetLocalPlayerCooldownDuration(spellID)
+    local duration = nil
+
+    if C_Spell and C_Spell.GetSpellCooldown then
+        local info = C_Spell.GetSpellCooldown(spellID)
+        if type(info) == "table" then
+            duration = tonumber(info.duration)
+        else
+            local _, legacyDuration = C_Spell.GetSpellCooldown(spellID)
+            duration = tonumber(legacyDuration)
+        end
+    end
+
+    if (not duration or duration <= 0) and GetSpellCooldown then
+        local _, legacyDuration = GetSpellCooldown(spellID)
+        duration = tonumber(legacyDuration)
+    end
+
+    if duration and duration > self.MIN_TRACKED_DURATION and duration < self.MAX_TRACKED_DURATION then
+        return duration
+    end
+
+    return nil
+end
+
+function TrinketTracker:GetSpecOverrideDuration(entry, specID)
+    if not entry then
+        return 0
+    end
+
+    if specID and type(entry.cooldownBySpec) == "table" then
+        local bySpec = entry.cooldownBySpec[specID]
+        if type(bySpec) == "number" and bySpec > 0 then
+            return bySpec
+        end
+    end
+
+    return 0
+end
+
+function TrinketTracker:GetDuration(entry, spellID, specID, guid)
+    if self:IsLocalPlayerGUID(guid) then
+        local apiDuration = self:GetLocalPlayerCooldownDuration(spellID)
+        if apiDuration and apiDuration > 0 then
+            return apiDuration
+        end
+    end
+
+    local duration = self:GetSpecOverrideDuration(entry, specID)
+    if duration > 0 then
+        return duration
+    end
+
+    duration = entry and entry.defaultCD or 0
 
     if duration <= 0 and GetSpellBaseCooldown then
         local baseMs = GetSpellBaseCooldown(spellID)
@@ -66,7 +127,7 @@ function TrinketTracker:Track(guid, name, classFile, spellID, sourceFlags)
         return
     end
 
-    local duration = self:GetDuration(entry, spellID)
+    local duration = self:GetDuration(entry, spellID, specID, guid)
     if not duration or duration <= 0 then
         return
     end
