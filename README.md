@@ -48,6 +48,29 @@ Gladtools/
     SettingsUI.lua
 ```
 
+## Installation
+
+1. Close World of Warcraft.
+2. Copy the `Gladtools` folder into your Retail addons directory.
+
+Windows path:
+`C:\Program Files (x86)\World of Warcraft\_retail_\Interface\AddOns\Gladtools`
+
+macOS path:
+`/Applications/World of Warcraft/_retail_/Interface/AddOns/Gladtools`
+
+3. Make sure the `.toc` file is at:
+`.../AddOns/Gladtools/Gladtools.toc`
+4. Start WoW Retail and open Character Select.
+5. Click `AddOns` and verify `Gladtools` is enabled.
+6. Enter the game and run `/gladtools` to open settings.
+7. Optional: run `/gladtools snapshot` to confirm trackers are active.
+
+Update steps:
+1. Exit WoW.
+2. Replace the old `Gladtools` folder with the new one.
+3. Keep your existing `GladToolsDB` saved variables unless you want a full reset.
+
 ## Presets
 
 - `Healer`
