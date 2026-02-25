@@ -177,7 +177,7 @@ function SettingsUI:CreatePanel()
 
     self.cards = self.cards or {}
     self.cards.presets = createCard(panel, 16, -68, 426, 86)
-    self.cards.core = createCard(panel, 16, -162, 426, 260)
+    self.cards.core = createCard(panel, 16, -162, 426, 288)
     self.cards.display = createCard(panel, 456, -68, 298, 250)
     self.cards.snapshot = createCard(panel, 456, -328, 298, 154, "Live Arena Snapshot", "Current runtime activity")
 
@@ -242,6 +242,10 @@ function SettingsUI:CreatePanel()
 
     self.controls.trackTrinkets = GT:CreateBasicCheckbox(panel, "Track trinkets", 20, -386, function(value)
         GT:SetSetting({ "trinkets", "enabled" }, value, "settings_ui")
+    end)
+
+    self.controls.topNotifications = GT:CreateBasicCheckbox(panel, "Top alerts: healer CC + enemy burst", 20, -414, function(value)
+        GT:SetSetting({ "notifications", "enabled" }, value, "settings_ui")
     end)
 
     createSectionHeader(panel, "Display", 460, -76)
@@ -367,6 +371,9 @@ function SettingsUI:RefreshControls()
     self.controls.showDR:SetChecked(settings.dr.enabled and settings.dr.showOnEnemyFrames and true or false)
     self.controls.showCooldownIcons:SetChecked(settings.unitFrames.cooldowns.enabled and true or false)
     self.controls.trackTrinkets:SetChecked(settings.trinkets.enabled and true or false)
+
+    local notifications = settings.notifications or {}
+    self.controls.topNotifications:SetChecked(notifications.enabled ~= false)
 
     local pointerMode = settings.pointers.mode or GT.POINTER_MODES.OFF
     local pointerLabel = GT.POINTER_MODE_LABELS[pointerMode] or pointerMode

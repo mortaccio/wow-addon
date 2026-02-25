@@ -14,6 +14,7 @@ Modules/UnitMap.lua
 Modules/CooldownTracker.lua
 Modules/TrinketTracker.lua
 Modules/DRTracker.lua
+Modules/Notifications.lua
 Modules/UnitFrames.lua
 Modules/CastBars.lua
 Modules/PointerSystem.lua

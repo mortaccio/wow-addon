@@ -68,6 +68,9 @@ GT.PRESETS = {
             trinkets = {
                 enabled = true,
             },
+            notifications = {
+                enabled = true,
+            },
         },
     },
     dps = {
@@ -112,6 +115,9 @@ GT.PRESETS = {
                 showOnEnemyFrames = true,
             },
             trinkets = {
+                enabled = true,
+            },
+            notifications = {
                 enabled = true,
             },
         },

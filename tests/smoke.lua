@@ -201,6 +201,7 @@ local files = {
     "Gladtools/Modules/CooldownTracker.lua",
     "Gladtools/Modules/TrinketTracker.lua",
     "Gladtools/Modules/DRTracker.lua",
+    "Gladtools/Modules/Notifications.lua",
     "Gladtools/Modules/UnitFrames.lua",
     "Gladtools/Modules/CastBars.lua",
     "Gladtools/Modules/PointerSystem.lua",
