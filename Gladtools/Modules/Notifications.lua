@@ -489,7 +489,8 @@ function Notifications:HandleBurstCast(sourceGUID, sourceName, sourceFlags, spel
 
     local sourceInfo = GT.UnitMap and GT.UnitMap:GetInfoByGUID(sourceGUID)
     local classFile = sourceInfo and sourceInfo.classFile
-    local entry = GT:GetCooldownEntryForSpell(spellID, classFile)
+    local specID = sourceInfo and sourceInfo.specID
+    local entry = GT:GetCooldownEntryForSpell(spellID, classFile, specID)
     if not self:IsBurstEntry(entry) then
         return
     end

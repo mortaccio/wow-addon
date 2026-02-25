@@ -16,18 +16,36 @@ local function removeUnitFromGuidMap(unitTable, unit)
     unitTable[unit] = nil
 end
 
-local function getArenaSpecRole(index)
+local function getArenaSpecInfo(index)
     if not (GetArenaOpponentSpec and GetSpecializationInfoByID) then
-        return nil
+        return nil, nil
     end
 
     local specID = GetArenaOpponentSpec(index)
     if not specID or specID <= 0 then
-        return nil
+        return nil, nil
     end
 
     local _, _, _, _, role = GetSpecializationInfoByID(specID)
-    return role
+    return specID, role
+end
+
+local function getPlayerSpecInfo()
+    if not (GetSpecialization and GetSpecializationInfo) then
+        return nil, nil
+    end
+
+    local specIndex = GetSpecialization()
+    if not specIndex then
+        return nil, nil
+    end
+
+    local specID, _, _, _, role = GetSpecializationInfo(specIndex)
+    if not specID or specID <= 0 then
+        return nil, nil
+    end
+
+    return specID, role
 end
 
 function UnitMap:Init()
@@ -41,6 +59,31 @@ function UnitMap:Reset()
     self.guidByUnit = {}
     self.unitsByGUID = {}
     self.infoByGUID = {}
+end
+
+function UnitMap:SetSpecForGUID(guid, specID, sourceTag)
+    if not guid or type(specID) ~= "number" or specID <= 0 then
+        return
+    end
+
+    local info = self.infoByGUID[guid]
+    if not info then
+        info = {
+            guid = guid,
+        }
+        self.infoByGUID[guid] = info
+    end
+
+    info.specID = specID
+    info.specSource = sourceTag or info.specSource
+
+    if GetSpecializationInfoByID then
+        local _, _, _, _, role = GetSpecializationInfoByID(specID)
+        if role and role ~= "NONE" then
+            info.role = role
+            info.isHealer = role == "HEALER"
+        end
+    end
 end
 
 function UnitMap:IsLikelyHealer(unit, classFile, role)
@@ -123,10 +166,26 @@ function UnitMap:RefreshUnit(unit)
     local name = UnitName and UnitName(unit)
     local _, classFile = UnitClass and UnitClass(unit)
     local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(unit)
+    if role == "NONE" then
+        role = nil
+    end
+
+    local specID = nil
+    local specRole = nil
+    if unit == "player" then
+        specID, specRole = getPlayerSpecInfo()
+        if specRole and specRole ~= "NONE" then
+            role = specRole
+        end
+    end
 
     info.name = name or info.name
     info.classFile = classFile or info.classFile
     info.role = role or info.role
+    if specID then
+        info.specID = specID
+        info.specSource = "player_spec"
+    end
     info.isHealer = self:IsLikelyHealer(unit, classFile, role)
     info.isFriendly = UnitIsFriend and UnitIsFriend("player", unit) and true or false
     info.lastUnit = unit
@@ -160,7 +219,11 @@ function UnitMap:ScanArenaUnits()
         if guid then
             local info = self.infoByGUID[guid]
             if info then
-                local role = getArenaSpecRole(index)
+                local specID, role = getArenaSpecInfo(index)
+                if specID then
+                    info.specID = specID
+                    info.specSource = "arena_api"
+                end
                 if role then
                     info.role = role
                     info.isHealer = role == "HEALER"
@@ -203,6 +266,11 @@ function UnitMap:GetInfoByGUID(guid)
         return nil
     end
     return self.infoByGUID[guid]
+end
+
+function UnitMap:GetSpecIDForGUID(guid)
+    local info = guid and self.infoByGUID[guid]
+    return info and info.specID or nil
 end
 
 function UnitMap:IsPlayerControlledSource(sourceFlags)

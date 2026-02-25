@@ -145,6 +145,7 @@ function GT:RegisterRuntimeEvents()
         "UNIT_PET",
         "UNIT_TARGET",
         "UNIT_SPELLCAST_START",
+        "UNIT_SPELLCAST_SUCCEEDED",
         "UNIT_SPELLCAST_STOP",
         "UNIT_SPELLCAST_FAILED",
         "UNIT_SPELLCAST_INTERRUPTED",

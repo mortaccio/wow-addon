@@ -60,7 +60,8 @@ function TrinketTracker:Track(guid, name, classFile, spellID, sourceFlags)
         return
     end
 
-    local entry = GT:GetTrinketEntryForSpell(spellID, classFile)
+    local specID = GT.UnitMap and GT.UnitMap.GetSpecIDForGUID and GT.UnitMap:GetSpecIDForGUID(guid) or nil
+    local entry = GT:GetTrinketEntryForSpell(spellID, classFile, specID)
     if not entry then
         return
     end

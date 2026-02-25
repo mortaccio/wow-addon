@@ -6,7 +6,7 @@ Retail World of Warcraft Arena PvP addon with modular tracking for cooldowns, tr
 
 - Real event-driven tracking (`COMBAT_LOG_EVENT_UNFILTERED`, arena/unit events, spellcast events)
 - Arena enemy frames (`arena1-3`) and friendly frames (`player`, `party1-4`)
-- Near frames (`party1-4` in range)
+- Near frames (`nameplate1-5` hostile players in range)
 - Cooldown icons with numeric countdown text on frames
 - Trinket/racial timer detection and display
 - DR tracking (stun/incap/fear/silence/root) with live reset timers on enemy frames
@@ -20,6 +20,8 @@ Retail World of Warcraft Arena PvP addon with modular tracking for cooldowns, tr
 - Top-of-screen burst alerts when your healer is in hard CC and enemies press offensive cooldowns
 - Enemy "CC on you" cast-start warnings at top of screen
 - Enhanced player nameplates: arena labels, healer icon, class-color HP, large CC debuffs (right), your debuffs (top), and plate cast bars
+- Cooldown tracking now uses Blizzard APIs where available (`C_Spell` / `GetSpellBaseCooldown`) with normalized spec-aware fallback data
+- Expanded normalized cooldown and DR datasets for stronger live arena coverage
 - Presets (`Healer`, `DPS`) with editable overrides and automatic `Custom` state
 - Blizzard Settings panel registration (with fallback)
 
@@ -101,8 +103,8 @@ Each spell entry includes:
 
 ## TODO (Competitive 3v3)
 
-- Expand dataset with spec/talent/PvP-talent overrides and patch-aware values
-- Expand DR spell coverage and edge-case handling (class talents/variants/immunity nuances)
+- Continue tuning spec/talent/PvP-talent overrides for edge patches
+- Expand special-case DR handling (immunity/hybrid aura variants)
 - Add stronger near-frame range engine (e.g., LibRangeCheck integration)
 
 ## Visual Preview Without WoW

@@ -7,60 +7,140 @@ GT:RegisterModule("DRTracker", DRTracker)
 DRTracker.RESET_SECONDS = 18
 DRTracker.PURGE_INTERVAL = 1.0
 
-DRTracker.CATEGORY_LABELS = {
-    stun = "STN",
-    incap = "INC",
-    fear = "FEA",
-    silence = "SIL",
-    root = "ROT",
+local CATEGORY_ORDER = { "stun", "incap", "fear", "silence", "root" }
+
+DRTracker.CATEGORY_DEFINITIONS = {
+    stun = {
+        label = "STN",
+        spells = {
+            408, -- Kidney Shot
+            853, -- Hammer of Justice
+            1833, -- Cheap Shot
+            5211, -- Mighty Bash
+            30283, -- Shadowfury
+            46968, -- Shockwave
+            132169, -- Storm Bolt
+            179057, -- Chaos Nova
+            20549, -- War Stomp
+            119381, -- Leg Sweep
+            221562, -- Asphyxiate
+            108194, -- Asphyxiate (legacy)
+            24394, -- Intimidation
+            117526, -- Binding Shot stun
+            91797, -- Monstrous Blow
+            91800, -- Gnaw
+            200166, -- Metamorphosis (DH)
+            211881, -- Fel Eruption
+            255941, -- Wake of Ashes
+            22570, -- Maim
+            64044, -- Psychic Horror
+            202346, -- Double Barrel
+            118905, -- Static Charge
+            22703, -- Infernal Awakening
+            305485, -- Lightning Lasso
+        },
+    },
+    incap = {
+        label = "INC",
+        spells = {
+            99, -- Incapacitating Roar
+            118, -- Polymorph
+            28272, -- Polymorph: Pig
+            28271, -- Polymorph: Turtle
+            61305, -- Polymorph: Black Cat
+            61721, -- Polymorph: Rabbit
+            61780, -- Polymorph: Turkey
+            126819, -- Polymorph: Porcupine
+            161353, -- Polymorph variants
+            161354, -- Polymorph variants
+            6770, -- Sap
+            1776, -- Gouge
+            20066, -- Repentance
+            2094, -- Blind
+            3355, -- Freezing Trap
+            203337, -- Freezing Trap (variant)
+            51514, -- Hex
+            210873, -- Hex: Compy
+            211004, -- Hex: Spider
+            211010, -- Hex: Snake
+            211015, -- Hex: Cockroach
+            269352, -- Hex: Skeletal Hatchling
+            277778, -- Hex: Zandalari Tendonripper
+            115078, -- Paralysis
+            217832, -- Imprison
+            82691, -- Ring of Frost
+            31661, -- Dragon's Breath
+            207167, -- Blinding Sleet
+            710, -- Banish
+            33786, -- Cyclone
+            107079, -- Quaking Palm
+            2637, -- Hibernate
+        },
+    },
+    fear = {
+        label = "FEA",
+        spells = {
+            5246, -- Intimidating Shout
+            5484, -- Howl of Terror
+            5782, -- Fear
+            118699, -- Fear (variant)
+            8122, -- Psychic Scream
+            10326, -- Turn Evil
+            1513, -- Scare Beast
+            6358, -- Seduction
+            205369, -- Mind Bomb
+            226943, -- Mind Bomb (legacy)
+            130616, -- Fear (glyph variant)
+            207685, -- Sigil of Misery
+        },
+    },
+    silence = {
+        label = "SIL",
+        spells = {
+            1330, -- Garrote - Silence
+            15487, -- Silence
+            31935, -- Avenger's Shield silence
+            47476, -- Strangulate
+            204490, -- Sigil of Silence
+            202933, -- Spider Sting
+            81261, -- Solar Beam silence aura
+            217824, -- Shield of Virtue
+            25046, -- Arcane Torrent (legacy)
+        },
+    },
+    root = {
+        label = "ROT",
+        spells = {
+            122, -- Frost Nova
+            339, -- Entangling Roots
+            33395, -- Freeze
+            64695, -- Earthgrab Totem
+            102359, -- Mass Entanglement
+            170855, -- Entangling Roots (proc variants)
+            204085, -- Deathchill
+            162480, -- Steel Trap
+            157997, -- Ice Nova
+            212638, -- Tracker's Net
+            45334, -- Immobilized
+            285515, -- Frostweave Net
+        },
+    },
 }
 
-DRTracker.SPELL_TO_CATEGORY = {
-    -- Stuns
-    [408] = "stun", -- Kidney Shot
-    [853] = "stun", -- Hammer of Justice
-    [1833] = "stun", -- Cheap Shot
-    [5211] = "stun", -- Mighty Bash
-    [30283] = "stun", -- Shadowfury
-    [46968] = "stun", -- Shockwave
-    [132169] = "stun", -- Storm Bolt
-    [179057] = "stun", -- Chaos Nova
-    [20549] = "stun", -- War Stomp
-    [119381] = "stun", -- Leg Sweep
-    [221562] = "stun", -- Asphyxiate
+DRTracker.CATEGORY_LABELS = {}
+DRTracker.SPELL_TO_CATEGORY = {}
 
-    -- Incapacitate / disorient-style DR bucket
-    [99] = "incap", -- Incapacitating Roar
-    [118] = "incap", -- Polymorph
-    [6770] = "incap", -- Sap
-    [20066] = "incap", -- Repentance
-    [2094] = "incap", -- Blind
-    [3355] = "incap", -- Freezing Trap
-    [51514] = "incap", -- Hex
-    [115078] = "incap", -- Paralysis
-    [217832] = "incap", -- Imprison
-    [82691] = "incap", -- Ring of Frost
-
-    -- Fears
-    [5246] = "fear", -- Intimidating Shout
-    [5484] = "fear", -- Howl of Terror
-    [5782] = "fear", -- Fear
-    [8122] = "fear", -- Psychic Scream
-    [118699] = "fear", -- Fear (Warlock variant)
-
-    -- Silences
-    [1330] = "silence", -- Garrote - Silence
-    [15487] = "silence", -- Silence
-    [31935] = "silence", -- Avenger's Shield silence
-    [47476] = "silence", -- Strangulate
-
-    -- Roots
-    [122] = "root", -- Frost Nova
-    [339] = "root", -- Entangling Roots
-    [33395] = "root", -- Freeze
-    [64695] = "root", -- Earthgrab Totem
-    [102359] = "root", -- Mass Entanglement
-}
+for _, category in ipairs(CATEGORY_ORDER) do
+    local definition = DRTracker.CATEGORY_DEFINITIONS[category]
+    if definition then
+        DRTracker.CATEGORY_LABELS[category] = definition.label or string.upper(category)
+        for _, spellID in ipairs(definition.spells or {}) do
+            if type(spellID) == "number" and spellID > 0 then
+                DRTracker.SPELL_TO_CATEGORY[spellID] = category
+            end
+        end
+    end
+end
 
 local function getNow()
     if GetTime then

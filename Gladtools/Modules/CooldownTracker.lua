@@ -5,6 +5,10 @@ GT.CooldownTracker = CooldownTracker
 GT:RegisterModule("CooldownTracker", CooldownTracker)
 
 CooldownTracker.PURGE_INTERVAL = 1.0
+CooldownTracker.DEDUPE_SECONDS = 0.30
+CooldownTracker.DEDUPE_RETENTION = 15.0
+CooldownTracker.MIN_TRACKED_DURATION = 1.5
+CooldownTracker.MAX_TRACKED_DURATION = 3600
 
 local function getSpellNameAndIcon(spellID)
     if C_Spell and C_Spell.GetSpellInfo then
@@ -25,11 +29,13 @@ end
 function CooldownTracker:Init()
     self.activeByGUID = {}
     self.lastPurge = 0
+    self.lastCastSeenAt = {}
 end
 
 function CooldownTracker:Reset()
     self.activeByGUID = {}
     self.lastPurge = 0
+    self.lastCastSeenAt = {}
 end
 
 function CooldownTracker:IsEnabled()
@@ -55,31 +61,138 @@ function CooldownTracker:ShouldTrackSide(isFriendly)
     return cooldownSettings.showEnemy and true or false
 end
 
-function CooldownTracker:GetDuration(entry, spellID)
-    local duration = entry and entry.defaultCD or 0
+function CooldownTracker:GetSpecOverrideDuration(entry, specID)
+    if not entry then
+        return 0
+    end
 
-    if duration <= 0 and GetSpellBaseCooldown then
+    if specID and type(entry.cooldownBySpec) == "table" then
+        local bySpec = entry.cooldownBySpec[specID]
+        if type(bySpec) == "number" and bySpec > 0 then
+            return bySpec
+        end
+    end
+
+    return 0
+end
+
+function CooldownTracker:GetDefaultEntryDuration(entry)
+    if not entry then
+        return 0
+    end
+
+    local defaultCD = tonumber(entry.defaultCD) or 0
+    if defaultCD > 0 then
+        return defaultCD
+    end
+
+    return 0
+end
+
+function CooldownTracker:GetBaseCooldownDuration(spellID)
+    if GetSpellBaseCooldown then
         local baseMs = GetSpellBaseCooldown(spellID)
         if type(baseMs) == "number" and baseMs > 0 then
-            duration = baseMs / 1000
+            return baseMs / 1000
         end
     end
+    return nil
+end
 
-    if duration <= 0 and C_Spell and C_Spell.GetSpellCharges then
-        local charges = C_Spell.GetSpellCharges(spellID)
-        if type(charges) == "table" then
-            if type(charges.cooldownDuration) == "number" and charges.cooldownDuration > 0 then
-                duration = charges.cooldownDuration
-            end
+function CooldownTracker:GetLocalPlayerCooldownDuration(spellID)
+    local duration = nil
+
+    if C_Spell and C_Spell.GetSpellCooldown then
+        local info = C_Spell.GetSpellCooldown(spellID)
+        if type(info) == "table" then
+            duration = tonumber(info.duration)
         else
-            local _, _, _, chargeDuration = C_Spell.GetSpellCharges(spellID)
-            if type(chargeDuration) == "number" and chargeDuration > 0 then
-                duration = chargeDuration
-            end
+            local _, legacyDuration = C_Spell.GetSpellCooldown(spellID)
+            duration = tonumber(legacyDuration)
         end
     end
 
-    return duration
+    if (not duration or duration <= 0) and GetSpellCooldown then
+        local _, legacyDuration = GetSpellCooldown(spellID)
+        duration = tonumber(legacyDuration)
+    end
+
+    if duration and duration > self.MIN_TRACKED_DURATION and duration < self.MAX_TRACKED_DURATION then
+        return duration
+    end
+
+    return nil
+end
+
+function CooldownTracker:GetLocalPlayerChargeDuration(spellID)
+    if not (C_Spell and C_Spell.GetSpellCharges) then
+        return nil
+    end
+
+    local duration = nil
+    local chargeInfo = C_Spell.GetSpellCharges(spellID)
+    if type(chargeInfo) == "table" then
+        duration = tonumber(chargeInfo.cooldownDuration or chargeInfo.chargeDuration or chargeInfo.duration)
+    else
+        local legacyCharges = C_Spell.GetSpellCharges(spellID)
+        if type(legacyCharges) == "number" then
+            local _, _, _, chargeDuration = C_Spell.GetSpellCharges(spellID)
+            duration = tonumber(chargeDuration)
+        end
+    end
+
+    if duration and duration > self.MIN_TRACKED_DURATION and duration < self.MAX_TRACKED_DURATION then
+        return duration
+    end
+
+    return nil
+end
+
+function CooldownTracker:IsLocalPlayerGUID(guid)
+    if not guid or not UnitGUID then
+        return false
+    end
+    return UnitGUID("player") == guid
+end
+
+function CooldownTracker:GetDuration(entry, spellID, sourceGUID, sourceInfo)
+    local specID = sourceInfo and sourceInfo.specID
+    local duration = 0
+
+    -- Blizzard does not expose enemy cooldown timers directly; use local-player API when available.
+    if self:IsLocalPlayerGUID(sourceGUID) then
+        local apiDuration = self:GetLocalPlayerCooldownDuration(spellID)
+        local chargeDuration = self:GetLocalPlayerChargeDuration(spellID)
+        if chargeDuration and (not apiDuration or chargeDuration > apiDuration) then
+            apiDuration = chargeDuration
+        end
+
+        if apiDuration and apiDuration > 0 then
+            return apiDuration
+        end
+    end
+
+    duration = self:GetSpecOverrideDuration(entry, specID)
+    if duration > 0 then
+        return duration
+    end
+
+    local baseDuration = self:GetBaseCooldownDuration(spellID)
+    if baseDuration and baseDuration > 0 then
+        return baseDuration
+    end
+
+    return self:GetDefaultEntryDuration(entry)
+end
+
+function CooldownTracker:ShouldAcceptCast(sourceGUID, spellID, now)
+    local key = tostring(sourceGUID) .. ":" .. tostring(spellID)
+    local previous = self.lastCastSeenAt[key]
+    if previous and (now - previous) < self.DEDUPE_SECONDS then
+        return false
+    end
+    self.lastCastSeenAt[key] = now
+    return true
 end
 
 function CooldownTracker:TrackSpell(sourceGUID, sourceName, sourceFlags, spellID, spellName)
@@ -97,7 +210,8 @@ function CooldownTracker:TrackSpell(sourceGUID, sourceName, sourceFlags, spellID
 
     local sourceInfo = GT.UnitMap:GetInfoByGUID(sourceGUID)
     local classFile = sourceInfo and sourceInfo.classFile
-    local entry = GT:GetCooldownEntryForSpell(spellID, classFile)
+    local sourceSpecID = sourceInfo and sourceInfo.specID
+    local entry = GT:GetCooldownEntryForSpell(spellID, classFile, sourceSpecID)
     if not entry then
         return
     end
@@ -111,7 +225,13 @@ function CooldownTracker:TrackSpell(sourceGUID, sourceName, sourceFlags, spellID
         return
     end
 
-    local duration = self:GetDuration(entry, spellID)
+    if (not sourceSpecID) and entry.specID and GT.UnitMap.SetSpecForGUID then
+        GT.UnitMap:SetSpecForGUID(sourceGUID, entry.specID, "cooldown_spell")
+        sourceInfo = GT.UnitMap:GetInfoByGUID(sourceGUID) or sourceInfo
+        sourceSpecID = sourceInfo and sourceInfo.specID
+    end
+
+    local duration = self:GetDuration(entry, spellID, sourceGUID, sourceInfo)
     if not duration or duration <= 0 then
         return
     end
@@ -121,6 +241,9 @@ function CooldownTracker:TrackSpell(sourceGUID, sourceName, sourceFlags, spellID
     resolvedIcon = entry.icon or resolvedIcon
 
     local now = GetTime and GetTime() or 0
+    if not self:ShouldAcceptCast(sourceGUID, spellID, now) then
+        return
+    end
 
     local guidTable = self.activeByGUID[sourceGUID]
     if not guidTable then
@@ -134,6 +257,7 @@ function CooldownTracker:TrackSpell(sourceGUID, sourceName, sourceFlags, spellID
         icon = resolvedIcon,
         category = entry.category,
         classFile = classFile,
+        specID = sourceSpecID,
         priority = entry.priority or 50,
         sourceGUID = sourceGUID,
         sourceName = (sourceInfo and sourceInfo.name) or sourceName,
@@ -161,6 +285,12 @@ function CooldownTracker:PurgeExpired()
 
         if not next(guidTable) then
             self.activeByGUID[guid] = nil
+        end
+    end
+
+    for key, timestamp in pairs(self.lastCastSeenAt) do
+        if (now - timestamp) > self.DEDUPE_RETENTION then
+            self.lastCastSeenAt[key] = nil
         end
     end
 end
@@ -235,9 +365,40 @@ function CooldownTracker:HandleCombatLog()
     self:TrackSpell(sourceGUID, sourceName, sourceFlags, spellID, spellName)
 end
 
-function CooldownTracker:HandleEvent(event)
+function CooldownTracker:HandleUnitSpellcastSucceeded(unit, _, spellID)
+    if type(spellID) ~= "number" or not unit then
+        return
+    end
+
+    if UnitExists and not UnitExists(unit) then
+        return
+    end
+
+    if UnitIsPlayer and not UnitIsPlayer(unit) then
+        return
+    end
+
+    if GT.UnitMap and GT.UnitMap.RefreshUnit then
+        GT.UnitMap:RefreshUnit(unit)
+    end
+
+    local guid = GT.UnitMap and GT.UnitMap.GetGUIDForUnit and GT.UnitMap:GetGUIDForUnit(unit)
+    if not guid and UnitGUID then
+        guid = UnitGUID(unit)
+    end
+    if not guid then
+        return
+    end
+
+    local unitName = UnitName and UnitName(unit) or nil
+    self:TrackSpell(guid, unitName, nil, spellID, nil)
+end
+
+function CooldownTracker:HandleEvent(event, arg1, arg2, arg3)
     if event == "COMBAT_LOG_EVENT_UNFILTERED" then
         self:HandleCombatLog()
+    elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
+        self:HandleUnitSpellcastSucceeded(arg1, arg2, arg3)
     elseif event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA" then
         self:Reset()
     end
