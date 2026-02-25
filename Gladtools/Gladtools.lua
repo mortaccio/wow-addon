@@ -1,0 +1,2 @@
+-- Legacy file kept for repository compatibility.
+-- The addon now loads from the modular file list in Gladtools.toc.

@@ -1,0 +1,22 @@
+## Interface: 110200
+## Title: Gladtools
+## Notes: Arena-focused PvP cooldown, trinket, cast bar, and pointer tracker
+## Author: asenic
+## Version: 0.2.0
+## SavedVariablesPerCharacter: GladToolsDB
+
+Init.lua
+Utils.lua
+Config.lua
+CooldownData.lua
+
+Modules/UnitMap.lua
+Modules/CooldownTracker.lua
+Modules/TrinketTracker.lua
+Modules/DRTracker.lua
+Modules/UnitFrames.lua
+Modules/CastBars.lua
+Modules/PointerSystem.lua
+Modules/SettingsUI.lua
+
+Main.lua
