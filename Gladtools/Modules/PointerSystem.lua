@@ -5,17 +5,69 @@ GT.PointerSystem = PointerSystem
 GT:RegisterModule("PointerSystem", PointerSystem)
 
 PointerSystem.UPDATE_INTERVAL = 0.20
+PointerSystem.PULSE_SPEED = 6.0
+PointerSystem.PULSE_BASE = 0.56
+PointerSystem.PULSE_RANGE = 0.18
+
+PointerSystem.COLORS = {
+    healer = { 0.28, 0.95, 0.56 },
+    friendly = { 0.26, 0.72, 0.96 },
+    explicit = { 0.96, 0.84, 0.22 },
+}
+
+local function setTextureColor(texture, r, g, b, a)
+    if texture and texture.SetVertexColor then
+        texture:SetVertexColor(r, g, b, a or 1)
+    end
+end
+
+local function getPulseOffset(unit)
+    if type(unit) ~= "string" then
+        return 0
+    end
+
+    local total = 0
+    for index = 1, #unit do
+        total = total + string.byte(unit, index)
+    end
+
+    return (total % 10) / 10
+end
 
 local function createPointerFrame(unit)
-    local frame = CreateFrame("Frame", nil, UIParent)
-    frame:SetSize(24, 24)
+    local frame = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+    frame:SetSize(22, 22)
+
+    if frame.SetBackdrop then
+        frame:SetBackdrop({
+            bgFile = "Interface/Buttons/WHITE8x8",
+            edgeFile = "Interface/Buttons/WHITE8x8",
+            edgeSize = 1,
+        })
+        frame:SetBackdropColor(0.02, 0.02, 0.02, 0.68)
+        if frame.SetBackdropBorderColor then
+            frame:SetBackdropBorderColor(0.20, 0.20, 0.22, 0.95)
+        end
+    end
+
+    frame.fill = frame:CreateTexture(nil, "BACKGROUND")
+    frame.fill:SetAllPoints(frame)
+    frame.fill:SetTexture("Interface/Buttons/WHITE8x8")
+    setTextureColor(frame.fill, 0.28, 0.74, 1.0, 0.14)
 
     frame.texture = frame:CreateTexture(nil, "OVERLAY")
     frame.texture:SetAllPoints(frame)
     frame.texture:SetTexture("Interface/Minimap/Minimap-QuestArrow")
-    frame.texture:SetRotation(math.rad(-90))
+    if frame.texture.SetRotation then
+        frame.texture:SetRotation(math.rad(-90))
+    end
+    if frame.texture.SetTexCoord then
+        frame.texture:SetTexCoord(0.18, 0.82, 0.18, 0.82)
+    end
 
     frame.unit = unit
+    frame.isExplicit = false
+    frame.pulseOffset = getPulseOffset(unit)
     frame:Hide()
 
     return frame
@@ -51,13 +103,60 @@ function PointerSystem:GetOrCreatePointer(unit)
     return frame
 end
 
-function PointerSystem:AnchorPointer(pointerFrame, unit)
+function PointerSystem:IsHealerUnit(unit)
+    if not unit then
+        return false
+    end
+
+    if UnitExists and not UnitExists(unit) then
+        return false
+    end
+
+    if GT.UnitMap then
+        GT.UnitMap:RefreshUnit(unit)
+        local guid = GT.UnitMap:GetGUIDForUnit(unit)
+        if guid and GT.UnitMap:IsHealerGUID(guid) then
+            return true
+        end
+    end
+
+    if UnitGroupRolesAssigned then
+        return UnitGroupRolesAssigned(unit) == "HEALER"
+    end
+
+    return false
+end
+
+function PointerSystem:GetPointerColor(unit, isExplicit)
+    if isExplicit then
+        return self.COLORS.explicit[1], self.COLORS.explicit[2], self.COLORS.explicit[3], true
+    end
+
+    if self:IsHealerUnit(unit) then
+        return self.COLORS.healer[1], self.COLORS.healer[2], self.COLORS.healer[3], true
+    end
+
+    return self.COLORS.friendly[1], self.COLORS.friendly[2], self.COLORS.friendly[3], false
+end
+
+function PointerSystem:ApplyPointerStyle(pointerFrame, unit, isExplicit)
+    local r, g, b, isPriority = self:GetPointerColor(unit, isExplicit)
+    setTextureColor(pointerFrame.texture, r, g, b, 0.95)
+    setTextureColor(pointerFrame.fill, r, g, b, isPriority and 0.20 or 0.12)
+
+    if pointerFrame.SetBackdropBorderColor then
+        pointerFrame:SetBackdropBorderColor((r * 0.72) + 0.12, (g * 0.72) + 0.12, (b * 0.72) + 0.12, 0.95)
+    end
+end
+
+function PointerSystem:AnchorPointer(pointerFrame, unit, isExplicit)
     local size = GT:GetSetting({ "pointers", "size" }) or 24
     size = math.max(16, math.min(42, size))
     pointerFrame:SetSize(size, size)
+    self:ApplyPointerStyle(pointerFrame, unit, isExplicit)
 
     local unitFrame = GT.UnitFrames and GT.UnitFrames:GetUnitFrame(unit)
-    if unitFrame and unitFrame:IsShown() then
+    if unitFrame and unitFrame.IsShown and unitFrame:IsShown() then
         pointerFrame:ClearAllPoints()
         pointerFrame:SetPoint("RIGHT", unitFrame, "LEFT", -4, 0)
         pointerFrame:Show()
@@ -81,32 +180,69 @@ end
 function PointerSystem:GetPointerUnits()
     local settings = GT.db and GT.db.settings
     if not settings or not settings.enabled then
-        return {}
+        return {}, {}
     end
 
     local mode = settings.pointers and settings.pointers.mode or GT.POINTER_MODES.OFF
-    local units = GT.UnitMap:GetGroupFriendlyUnits(mode)
+    local modeUnits = GT.UnitMap:GetGroupFriendlyUnits(mode)
 
-    for unit in pairs(self.explicitTargets) do
+    local units = {}
+    local seen = {}
+    local explicitByUnit = {}
+
+    local function addUnit(unit, isExplicit)
+        if not unit then
+            return
+        end
+
+        if seen[unit] then
+            if isExplicit then
+                explicitByUnit[unit] = true
+            end
+            return
+        end
+
+        seen[unit] = true
+        explicitByUnit[unit] = isExplicit and true or false
         units[#units + 1] = unit
     end
 
-    return units
+    for _, unit in ipairs(modeUnits) do
+        addUnit(unit, false)
+    end
+
+    for unit in pairs(self.explicitTargets) do
+        addUnit(unit, true)
+    end
+
+    return units, explicitByUnit
 end
 
 function PointerSystem:RefreshPointers()
-    local units = self:GetPointerUnits()
+    local units, explicitByUnit = self:GetPointerUnits()
     local active = {}
 
     for _, unit in ipairs(units) do
         active[unit] = true
         local pointer = self:GetOrCreatePointer(unit)
-        self:AnchorPointer(pointer, unit)
+        pointer.isExplicit = explicitByUnit[unit] and true or false
+        self:AnchorPointer(pointer, unit, pointer.isExplicit)
     end
 
     for unit, pointer in pairs(self.pointerFrames) do
         if not active[unit] then
             pointer:Hide()
+        end
+    end
+end
+
+function PointerSystem:UpdatePulse()
+    local now = GetTime and GetTime() or 0
+    for _, pointer in pairs(self.pointerFrames) do
+        if pointer.IsShown and pointer:IsShown() and pointer.SetAlpha then
+            local wave = math.sin((now + (pointer.pulseOffset or 0)) * self.PULSE_SPEED)
+            local alpha = self.PULSE_BASE + ((wave + 1) * 0.5 * self.PULSE_RANGE)
+            pointer:SetAlpha(alpha)
         end
     end
 end
@@ -119,6 +255,7 @@ function PointerSystem:OnUpdate(elapsed)
 
     self.elapsed = 0
     self:RefreshPointers()
+    self:UpdatePulse()
 end
 
 function PointerSystem:OnSettingsChanged()

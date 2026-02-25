@@ -11,7 +11,8 @@ Retail World of Warcraft Arena PvP addon with modular tracking for cooldowns, tr
 - Trinket/racial timer detection and display
 - DR tracking (stun/incap/fear/silence/root) with live reset timers on enemy frames
 - Cast bars for arena units (+ optional focus/target)
-- Pointer system (off / all friendlies / healers only)
+- Pointer system (off / all friendlies / healers only) with role-aware color + pulse
+- Cleaner compact visual style: class accent bars, category-colored cooldown borders, DR badges
 - Presets (`Healer`, `DPS`) with editable overrides and automatic `Custom` state
 - Blizzard Settings panel registration (with fallback)
 

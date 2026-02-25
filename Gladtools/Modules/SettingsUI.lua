@@ -159,11 +159,15 @@ function SettingsUI:CreatePanel()
         SettingsUI:RefreshControls()
     end)
 
-    self.controls.iconSize = createSlider(panel, "Cooldown Icon Size", 460, -160, 16, 40, 1, function(value)
+    self.controls.pointerSize = createSlider(panel, "Pointer Size", 460, -160, 16, 42, 1, function(value)
+        GT:SetSetting({ "pointers", "size" }, value, "settings_ui")
+    end)
+
+    self.controls.iconSize = createSlider(panel, "Cooldown Icon Size", 460, -228, 16, 40, 1, function(value)
         GT:SetSetting({ "unitFrames", "cooldowns", "iconSize" }, value, "settings_ui")
     end)
 
-    self.controls.maxIcons = createSlider(panel, "Max Cooldown Icons", 460, -228, 1, 10, 1, function(value)
+    self.controls.maxIcons = createSlider(panel, "Max Cooldown Icons", 460, -296, 1, 10, 1, function(value)
         GT:SetSetting({ "unitFrames", "cooldowns", "maxIcons" }, value, "settings_ui")
     end)
 
@@ -204,6 +208,12 @@ function SettingsUI:RefreshControls()
     local pointerMode = settings.pointers.mode or GT.POINTER_MODES.OFF
     local pointerLabel = GT.POINTER_MODE_LABELS[pointerMode] or pointerMode
     self.controls.pointerModeButton:SetText("Pointer Mode: " .. pointerLabel)
+
+    local pointerSize = settings.pointers.size or 22
+    self.controls.pointerSize.suspendCallback = true
+    self.controls.pointerSize:SetValue(pointerSize)
+    self.controls.pointerSize.suspendCallback = false
+    self.controls.pointerSize.valueText:SetText(tostring(pointerSize))
 
     local iconSize = settings.unitFrames.cooldowns.iconSize or 24
     self.controls.iconSize.suspendCallback = true

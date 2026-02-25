@@ -30,7 +30,7 @@ GT.PRESETS = {
             enabled = true,
             pointers = {
                 mode = GT.POINTER_MODES.ALL_FRIENDLIES,
-                size = 24,
+                size = 22,
             },
             unitFrames = {
                 enemy = {
@@ -49,8 +49,8 @@ GT.PRESETS = {
                 },
                 cooldowns = {
                     enabled = true,
-                    iconSize = 24,
-                    maxIcons = 6,
+                    iconSize = 22,
+                    maxIcons = 5,
                     showEnemy = true,
                     showFriendly = true,
                 },
@@ -76,7 +76,7 @@ GT.PRESETS = {
             enabled = true,
             pointers = {
                 mode = GT.POINTER_MODES.HEALERS_ONLY,
-                size = 24,
+                size = 22,
             },
             unitFrames = {
                 enemy = {
@@ -95,8 +95,8 @@ GT.PRESETS = {
                 },
                 cooldowns = {
                     enabled = true,
-                    iconSize = 24,
-                    maxIcons = 6,
+                    iconSize = 22,
+                    maxIcons = 5,
                     showEnemy = true,
                     showFriendly = true,
                 },
