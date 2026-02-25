@@ -18,6 +18,8 @@ Retail World of Warcraft Arena PvP addon with modular tracking for cooldowns, tr
 - Pointer markers now include priority labels (`H`, `!`, party index) for quicker reads
 - Live runtime snapshot panel in settings (visible frames, active cooldowns/trinkets/DR/casts/pointers)
 - Top-of-screen burst alerts when your healer is in hard CC and enemies press offensive cooldowns
+- Enemy "CC on you" cast-start warnings at top of screen
+- Enhanced player nameplates: arena labels, healer icon, class-color HP, large CC debuffs (right), your debuffs (top), and plate cast bars
 - Presets (`Healer`, `DPS`) with editable overrides and automatic `Custom` state
 - Blizzard Settings panel registration (with fallback)
 
@@ -37,6 +39,7 @@ Gladtools/
     TrinketTracker.lua
     DRTracker.lua
     Notifications.lua
+    NameplateOverlays.lua
     UnitFrames.lua
     CastBars.lua
     PointerSystem.lua

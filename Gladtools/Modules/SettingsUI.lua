@@ -177,7 +177,7 @@ function SettingsUI:CreatePanel()
 
     self.cards = self.cards or {}
     self.cards.presets = createCard(panel, 16, -68, 426, 86)
-    self.cards.core = createCard(panel, 16, -162, 426, 288)
+    self.cards.core = createCard(panel, 16, -162, 426, 372)
     self.cards.display = createCard(panel, 456, -68, 298, 250)
     self.cards.snapshot = createCard(panel, 456, -328, 298, 154, "Live Arena Snapshot", "Current runtime activity")
 
@@ -246,6 +246,18 @@ function SettingsUI:CreatePanel()
 
     self.controls.topNotifications = GT:CreateBasicCheckbox(panel, "Top alerts: healer CC + enemy burst", 20, -414, function(value)
         GT:SetSetting({ "notifications", "enabled" }, value, "settings_ui")
+    end)
+
+    self.controls.showFriendlyCastBars = GT:CreateBasicCheckbox(panel, "Friendly cast bars under friendly frames", 20, -442, function(value)
+        GT:SetSetting({ "castBars", "friendly" }, value, "settings_ui")
+    end)
+
+    self.controls.enableNameplates = GT:CreateBasicCheckbox(panel, "Enable enhanced player nameplates", 20, -470, function(value)
+        GT:SetSetting({ "nameplates", "enabled" }, value, "settings_ui")
+    end)
+
+    self.controls.showFriendlyPlates = GT:CreateBasicCheckbox(panel, "Show overlays on friendly nameplates", 20, -498, function(value)
+        GT:SetSetting({ "nameplates", "showFriendly" }, value, "settings_ui")
     end)
 
     createSectionHeader(panel, "Display", 460, -76)
@@ -371,9 +383,14 @@ function SettingsUI:RefreshControls()
     self.controls.showDR:SetChecked(settings.dr.enabled and settings.dr.showOnEnemyFrames and true or false)
     self.controls.showCooldownIcons:SetChecked(settings.unitFrames.cooldowns.enabled and true or false)
     self.controls.trackTrinkets:SetChecked(settings.trinkets.enabled and true or false)
+    self.controls.showFriendlyCastBars:SetChecked(settings.castBars.friendly and true or false)
 
     local notifications = settings.notifications or {}
     self.controls.topNotifications:SetChecked(notifications.enabled ~= false)
+
+    local plateSettings = settings.nameplates or {}
+    self.controls.enableNameplates:SetChecked(plateSettings.enabled ~= false)
+    self.controls.showFriendlyPlates:SetChecked(plateSettings.showFriendly and true or false)
 
     local pointerMode = settings.pointers.mode or GT.POINTER_MODES.OFF
     local pointerLabel = GT.POINTER_MODE_LABELS[pointerMode] or pointerMode

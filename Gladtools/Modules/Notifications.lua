@@ -10,12 +10,21 @@ Notifications.FADE_SECONDS = 0.45
 Notifications.BURST_PRIORITY_MIN = 75
 Notifications.RENOTIFY_SECONDS = 8
 Notifications.CC_FALLBACK_SECONDS = 12
+Notifications.CC_ON_YOU_RENOTIFY = 3.0
 
 Notifications.HEALER_CC_CATEGORIES = {
     stun = true,
     incap = true,
     fear = true,
     silence = true,
+}
+
+Notifications.CC_ON_YOU_CATEGORIES = {
+    stun = true,
+    incap = true,
+    fear = true,
+    silence = true,
+    root = true,
 }
 
 local function getNow()
@@ -57,6 +66,7 @@ function Notifications:Init()
     self.displayUntil = 0
     self.fadeUntil = 0
     self.elapsed = 0
+    self.lastIncomingCCNotice = {}
 
     self:CreateBanner()
 
@@ -134,6 +144,7 @@ function Notifications:Reset()
     self.currentNotice = nil
     self.displayUntil = 0
     self.fadeUntil = 0
+    self.lastIncomingCCNotice = {}
 
     if self.banner then
         if self.banner.SetAlpha then
@@ -141,6 +152,75 @@ function Notifications:Reset()
         end
         self.banner:Hide()
     end
+end
+
+function Notifications:IsCCSpell(spellID)
+    if type(spellID) ~= "number" then
+        return false
+    end
+
+    local category = GT.DRTracker and GT.DRTracker.SPELL_TO_CATEGORY and GT.DRTracker.SPELL_TO_CATEGORY[spellID]
+    if not category then
+        return false
+    end
+
+    return self.CC_ON_YOU_CATEGORIES[category] and true or false
+end
+
+function Notifications:ShouldNotifyIncomingCC(unit, spellID)
+    local key = tostring(unit or "?") .. ":" .. tostring(spellID)
+    local now = getNow()
+    local previous = self.lastIncomingCCNotice[key]
+    if previous and (now - previous) < self.CC_ON_YOU_RENOTIFY then
+        return false
+    end
+
+    self.lastIncomingCCNotice[key] = now
+    return true
+end
+
+function Notifications:HandleIncomingCCCast(unit, isChannel)
+    if not self:IsEnabled() or not unit then
+        return
+    end
+
+    if UnitExists and not UnitExists(unit) then
+        return
+    end
+
+    if UnitIsFriend and UnitIsFriend("player", unit) then
+        return
+    end
+
+    if UnitExists and UnitIsUnit then
+        local targetUnit = unit .. "target"
+        if not UnitExists(targetUnit) or not UnitIsUnit(targetUnit, "player") then
+            return
+        end
+    end
+
+    local spellName, _, _, _, _, _, _, _, spellID
+    if isChannel then
+        spellName, _, _, _, _, _, _, spellID = UnitChannelInfo and UnitChannelInfo(unit)
+    else
+        spellName, _, _, _, _, _, _, _, spellID = UnitCastingInfo and UnitCastingInfo(unit)
+    end
+
+    if not spellName then
+        return
+    end
+
+    if not self:IsCCSpell(spellID) then
+        return
+    end
+
+    if not self:ShouldNotifyIncomingCC(unit, spellID) then
+        return
+    end
+
+    local enemyName = UnitName and UnitName(unit) or "Enemy"
+    local message = string.format("CC ON YOU: %s casting %s", enemyName, spellName)
+    self:EnqueueNotice(message, 1.00, 0.70, 0.22)
 end
 
 function Notifications:NormalizeCCState()
@@ -478,9 +558,13 @@ function Notifications:OnSettingsChanged()
     end
 end
 
-function Notifications:HandleEvent(event)
+function Notifications:HandleEvent(event, arg1)
     if event == "COMBAT_LOG_EVENT_UNFILTERED" then
         self:HandleCombatLog()
+    elseif event == "UNIT_SPELLCAST_START" then
+        self:HandleIncomingCCCast(arg1, false)
+    elseif event == "UNIT_SPELLCAST_CHANNEL_START" then
+        self:HandleIncomingCCCast(arg1, true)
     elseif event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA" then
         self:Reset()
     end

@@ -16,6 +16,20 @@ local function removeUnitFromGuidMap(unitTable, unit)
     unitTable[unit] = nil
 end
 
+local function getArenaSpecRole(index)
+    if not (GetArenaOpponentSpec and GetSpecializationInfoByID) then
+        return nil
+    end
+
+    local specID = GetArenaOpponentSpec(index)
+    if not specID or specID <= 0 then
+        return nil
+    end
+
+    local _, _, _, _, role = GetSpecializationInfoByID(specID)
+    return role
+end
+
 function UnitMap:Init()
     self.guidByUnit = {}
     self.unitsByGUID = {}
@@ -139,7 +153,20 @@ end
 
 function UnitMap:ScanArenaUnits()
     for index = 1, 3 do
-        self:RefreshUnit("arena" .. index)
+        local unit = "arena" .. index
+        self:RefreshUnit(unit)
+
+        local guid = self.guidByUnit[unit]
+        if guid then
+            local info = self.infoByGUID[guid]
+            if info then
+                local role = getArenaSpecRole(index)
+                if role then
+                    info.role = role
+                    info.isHealer = role == "HEALER"
+                end
+            end
+        end
     end
 end
 

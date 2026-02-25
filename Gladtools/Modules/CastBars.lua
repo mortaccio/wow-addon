@@ -18,6 +18,11 @@ local trackedUnits = {
     "arena1",
     "arena2",
     "arena3",
+    "player",
+    "party1",
+    "party2",
+    "party3",
+    "party4",
     "target",
     "focus",
 }
@@ -143,6 +148,13 @@ local function isArenaUnit(unit)
     return unit and unit:match("^arena%d$") ~= nil
 end
 
+local function isFriendlyGroupUnit(unit)
+    if unit == "player" then
+        return true
+    end
+    return type(unit) == "string" and unit:match("^party%d$") ~= nil
+end
+
 local function getUnitLabel(unit)
     if type(unit) ~= "string" then
         return "UNIT"
@@ -157,6 +169,13 @@ local function getUnitLabel(unit)
         return "TGT"
     elseif unit == "focus" then
         return "FOC"
+    elseif unit == "player" then
+        return "YOU"
+    end
+
+    local partyIndex = unit:match("^party(%d)$")
+    if partyIndex then
+        return "P" .. partyIndex
     end
 
     return string.upper(unit:sub(1, 3))
@@ -184,6 +203,10 @@ function CastBars:IsEnabledForUnit(unit)
 
     if isArenaUnit(unit) then
         return castSettings.arena and true or false
+    end
+
+    if isFriendlyGroupUnit(unit) then
+        return castSettings.friendly and true or false
     end
 
     if unit == "target" then

@@ -9,7 +9,7 @@ UnitFrames.UPDATE_INTERVAL = 0.1
 UnitFrames.UNITS = {
     enemy = { "arena1", "arena2", "arena3" },
     friendly = { "player", "party1", "party2", "party3", "party4" },
-    near = { "party1", "party2", "party3", "party4" },
+    near = { "nameplate1", "nameplate2", "nameplate3", "nameplate4", "nameplate5" },
 }
 
 UnitFrames.GROUP_DIMENSIONS = {
@@ -68,6 +68,29 @@ local function toTitleToken(value)
 
     local lowered = string.lower(value)
     return string.upper(lowered:sub(1, 1)) .. lowered:sub(2)
+end
+
+local function applyHealerRoleTexCoords(texture)
+    if not texture then
+        return
+    end
+
+    if texture.SetTexture then
+        texture:SetTexture("Interface/LFGFrame/UI-LFG-ICON-ROLES")
+    end
+
+    local left, right, top, bottom = nil, nil, nil, nil
+    if GetTexCoordsForRole then
+        left, right, top, bottom = GetTexCoordsForRole("HEALER")
+    end
+
+    if texture.SetTexCoord then
+        if left and right and top and bottom then
+            texture:SetTexCoord(left, right, top, bottom)
+        else
+            texture:SetTexCoord(0.26171875, 0.5234375, 0, 0.26171875)
+        end
+    end
 end
 
 local function setBackdrop(frame, fancy)
@@ -293,6 +316,12 @@ function UnitFrames:CreateUnitFrame(groupName, unit, index)
     frame.classIcon:SetPoint("BOTTOMRIGHT", frame.classIconBG, "BOTTOMRIGHT", -1, 1)
     frame.classIcon:SetTexture(134400)
 
+    frame.healerIcon = frame:CreateTexture(nil, "OVERLAY")
+    frame.healerIcon:SetSize(11, 11)
+    frame.healerIcon:SetPoint("BOTTOMRIGHT", frame.classIconBG, "BOTTOMRIGHT", 4, -4)
+    applyHealerRoleTexCoords(frame.healerIcon)
+    frame.healerIcon:Hide()
+
     frame.nameText = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     frame.nameText:SetPoint("TOPLEFT", frame.classIconBG, "TOPRIGHT", 6, -1)
     frame.nameText:SetWidth(width - 166)
@@ -376,7 +405,7 @@ end
 function UnitFrames:RefreshLayout()
     local enemyStartX, enemyStartY = -300, 160
     local friendlyStartX, friendlyStartY = 40, 160
-    local nearStartX, nearStartY = 40, -120
+    local nearStartX, nearStartY = -560, -110
 
     local enemyStep = self.GROUP_SPACING.enemy
     local friendlyStep = self.GROUP_SPACING.friendly
@@ -451,6 +480,18 @@ function UnitFrames:ShouldShowFrame(frame)
             return false
         end
 
+        if not (UnitExists and UnitExists(frame.unit)) then
+            return false
+        end
+
+        if UnitIsFriend and UnitIsFriend("player", frame.unit) then
+            return false
+        end
+
+        if UnitIsPlayer and not UnitIsPlayer(frame.unit) then
+            return false
+        end
+
         return self:IsNearUnitInRange(frame.unit)
     end
 
@@ -477,6 +518,11 @@ function UnitFrames:GetUnitShortLabel(unit)
         return "P" .. partyIndex
     end
 
+    local plateIndex = unit:match("^nameplate(%d+)$")
+    if plateIndex then
+        return "N" .. plateIndex
+    end
+
     if unit == "player" then
         return "YOU"
     elseif unit == "target" then
@@ -489,13 +535,17 @@ function UnitFrames:GetUnitShortLabel(unit)
 end
 
 function UnitFrames:GetRoleForUnit(unit)
-    if not UnitGroupRolesAssigned then
-        return "DAMAGER"
+    local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(unit) or nil
+    if role == "HEALER" or role == "TANK" or role == "DAMAGER" then
+        return role
     end
 
-    local role = UnitGroupRolesAssigned(unit)
-    if role == "HEALER" or role == "TANK" then
-        return role
+    if GT.UnitMap then
+        local guid = GT.UnitMap:GetGUIDForUnit(unit)
+        local info = guid and GT.UnitMap:GetInfoByGUID(guid)
+        if info and (info.role == "HEALER" or info.role == "TANK" or info.role == "DAMAGER") then
+            return info.role
+        end
     end
 
     return "DAMAGER"
@@ -506,6 +556,27 @@ function UnitFrames:GetRoleLabelAndColor(unit)
     local label = self.ROLE_LABELS[role] or "DPS"
     local color = self.ROLE_COLORS[role] or self.ROLE_COLORS.DAMAGER
     return label, color[1], color[2], color[3]
+end
+
+function UnitFrames:IsUnitHealer(unit, guid)
+    if GT.UnitMap and guid and GT.UnitMap:IsHealerGUID(guid) then
+        return true
+    end
+
+    local role = self:GetRoleForUnit(unit)
+    return role == "HEALER"
+end
+
+function UnitFrames:UpdateHealerMarker(frame, guid)
+    if not frame or not frame.healerIcon then
+        return
+    end
+
+    if self:IsUnitHealer(frame.unit, guid) then
+        frame.healerIcon:Show()
+    else
+        frame.healerIcon:Hide()
+    end
 end
 
 function UnitFrames:SetClassIcon(frame, classFile)
@@ -612,7 +683,8 @@ function UnitFrames:UpdateCooldownRow(frame, guid)
         return
     end
 
-    local showSide = frame.groupName == "enemy" and cooldownSettings.showEnemy or cooldownSettings.showFriendly
+    local showEnemySide = frame.groupName == "enemy" or frame.groupName == "near"
+    local showSide = showEnemySide and cooldownSettings.showEnemy or cooldownSettings.showFriendly
     if not showSide then
         self:HideCooldownIcons(frame)
         return
@@ -901,6 +973,7 @@ function UnitFrames:UpdateFrame(frame)
 
     local classFile = self:UpdateHealthAndName(frame)
     self:ApplyFrameChrome(frame, classFile, fancy)
+    self:UpdateHealerMarker(frame, guid)
 
     self:UpdateCooldownRow(frame, guid)
     self:UpdateTrinket(frame, guid)

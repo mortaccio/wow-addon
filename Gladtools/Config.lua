@@ -58,6 +58,7 @@ GT.PRESETS = {
             castBars = {
                 enabled = true,
                 arena = true,
+                friendly = true,
                 target = false,
                 focus = false,
             },
@@ -70,6 +71,16 @@ GT.PRESETS = {
             },
             notifications = {
                 enabled = true,
+            },
+            nameplates = {
+                enabled = true,
+                showFriendly = false,
+                classColorHealth = true,
+                showArenaLabels = true,
+                showHealerIcon = true,
+                showCCDebuffs = true,
+                showPlayerDebuffs = true,
+                showCastBars = true,
             },
         },
     },
@@ -107,6 +118,7 @@ GT.PRESETS = {
             castBars = {
                 enabled = true,
                 arena = true,
+                friendly = true,
                 target = false,
                 focus = false,
             },
@@ -119,6 +131,16 @@ GT.PRESETS = {
             },
             notifications = {
                 enabled = true,
+            },
+            nameplates = {
+                enabled = true,
+                showFriendly = false,
+                classColorHealth = true,
+                showArenaLabels = true,
+                showHealerIcon = true,
+                showCCDebuffs = true,
+                showPlayerDebuffs = true,
+                showCastBars = true,
             },
         },
     },
