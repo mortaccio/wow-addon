@@ -27,6 +27,13 @@ Retail World of Warcraft Arena PvP addon with modular tracking for cooldowns, tr
 - Presets (`Healer`, `DPS`) with editable overrides and automatic `Custom` state
 - Blizzard Settings panel registration (with fallback)
 
+## Midnight Compatibility
+
+- `.toc` includes Retail + Midnight interface targets: `110200`, `120000`, `120001`.
+- In Midnight contexts where spell-level combat data is restricted, Gladtools now auto-detects that state.
+- When restricted mode is detected, cooldown, trinket, and DR trackers are paused and UI rows switch to a non-misleading unavailable state.
+- Cast bars, pointers, frame layout, and visual UI customization continue to run.
+
 ## Folder Layout
 
 ```text

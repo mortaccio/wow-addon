@@ -1,7 +1,32 @@
-# Gladtools - Retail 10.2 Compatibility Improvements
+# Gladtools - Retail & Midnight Compatibility Improvements
 
 ## Summary of Enhancements
-This document outlines the robustness improvements made to ensure Gladtools functions reliably when installed in WoW Retail 10.2 (pre-patch 2026).
+This document outlines robustness improvements made to keep Gladtools stable across current Retail builds and Midnight prepatch/launch behavior changes.
+
+---
+
+## 0. **Midnight Compatibility Hardening** ✅
+
+### Motivation
+Midnight prepatch/launch introduces combat-addon restrictions in PvP contexts, where spell-level combat event data can be unavailable.
+
+### Changes Made
+- **Main.lua**
+  - Added runtime probe for spell-level `COMBAT_LOG_EVENT_UNFILTERED` payload quality.
+  - Added automatic restricted-mode detection and one-time user warning when spell IDs are consistently unavailable.
+  - Restricted mode now pauses cooldown/trinket/DR tracking and refreshes runtime event registrations safely.
+- **Utils.lua**
+  - Added shared `GT:GetSpellNameAndIcon()` and `GT:GetSpellName()` helpers for safer, centralized spell lookup behavior.
+- **CooldownTracker.lua / TrinketTracker.lua / DRTracker.lua**
+  - Added restricted-mode gating in `IsEnabled()` so these trackers fail soft instead of reporting misleading empty/ready states.
+- **UnitFrames.lua**
+  - Cooldown row now shows `CD unavailable` in restricted mode.
+  - Trinket icon is hidden when restricted mode is active.
+- **NameplateOverlays.lua / Notifications.lua**
+  - Added restricted-mode guards for combat-log handling paths.
+  - Replaced raw spell lookups with centralized safe helpers.
+- **tests/smoke.lua**
+  - Added coverage for restricted-mode detection and tracker pause/resume behavior.
 
 ---
 

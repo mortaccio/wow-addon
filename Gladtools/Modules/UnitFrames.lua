@@ -795,6 +795,13 @@ function UnitFrames:UpdateCooldownRow(frame, guid)
 
     frame.cooldownRow:Show()
 
+    if GT.IsCombatDataRestricted and GT:IsCombatDataRestricted() then
+        self:HideCooldownIcons(frame)
+        frame.cooldownSummary:SetText("CD unavailable")
+        frame.cooldownSummary:SetTextColor(1.00, 0.62, 0.30)
+        return
+    end
+
     local iconSize = math.max(16, math.min(40, cooldownSettings.iconSize or 24))
     local maxIcons = math.max(1, math.min(10, cooldownSettings.maxIcons or 6))
 
@@ -883,6 +890,14 @@ function UnitFrames:UpdateTrinket(frame, guid)
 
     local trinketEnabled = GT:GetSetting({ "trinkets", "enabled" })
     if not trinketEnabled then
+        frame.trinketIcon.spellID = nil
+        frame.trinketIcon.spellName = nil
+        frame.trinketIcon.remaining = nil
+        frame.trinketIcon:Hide()
+        return
+    end
+
+    if GT.IsCombatDataRestricted and GT:IsCombatDataRestricted() then
         frame.trinketIcon.spellID = nil
         frame.trinketIcon.spellName = nil
         frame.trinketIcon.remaining = nil

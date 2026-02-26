@@ -40,16 +40,8 @@ local function setTextureColor(texture, r, g, b, a)
 end
 
 local function getSpellNameAndIcon(spellID)
-    if C_Spell and C_Spell.GetSpellInfo then
-        local info = C_Spell.GetSpellInfo(spellID)
-        if info then
-            return info.name, info.iconID
-        end
-    end
-
-    if GetSpellInfo then
-        local name, _, icon = GetSpellInfo(spellID)
-        return name, icon
+    if GT and GT.GetSpellNameAndIcon then
+        return GT:GetSpellNameAndIcon(spellID)
     end
 
     return nil, nil
@@ -99,13 +91,7 @@ local function findAuraBySpellID(unit, spellID, filter)
     end
 
     if C_UnitAuras and C_UnitAuras.GetAuraDataBySpellName then
-        local spellName = nil
-        if C_Spell and C_Spell.GetSpellInfo then
-            local info = C_Spell.GetSpellInfo(spellID)
-            spellName = info and info.name or nil
-        elseif GetSpellInfo then
-            spellName = GetSpellInfo(spellID)
-        end
+        local spellName = select(1, getSpellNameAndIcon(spellID))
 
         if spellName then
             local auraData = buildAuraData(C_UnitAuras.GetAuraDataBySpellName(unit, spellName, filter))
@@ -749,6 +735,10 @@ function NameplateOverlays:UpdateAuraIcon(icon, entry, now, r, g, b)
 end
 
 function NameplateOverlays:ShouldShowPlateCooldowns(isFriendly)
+    if GT.IsCombatDataRestricted and GT:IsCombatDataRestricted() then
+        return false
+    end
+
     local settings = self:GetSettings()
     if settings.showCooldowns == false then
         return false
@@ -1150,6 +1140,10 @@ function NameplateOverlays:TrackPlayerDebuff(subEvent, sourceGUID, destGUID, spe
 end
 
 function NameplateOverlays:HandleCombatLog()
+    if GT.IsCombatDataRestricted and GT:IsCombatDataRestricted() then
+        return
+    end
+
     if not CombatLogGetCurrentEventInfo then
         return
     end

@@ -409,6 +409,10 @@ function DRTracker:Reset()
 end
 
 function DRTracker:IsEnabled()
+    if GT.IsCombatDataRestricted and GT:IsCombatDataRestricted() then
+        return false
+    end
+
     local settings = GT.db and GT.db.settings
     if not settings or not settings.enabled then
         return false

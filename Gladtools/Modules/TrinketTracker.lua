@@ -13,25 +13,19 @@ TrinketTracker.CC_BREAK_INFER_WINDOW = 2.5
 TrinketTracker.INFERRED_TRINKET_SPELLS = { 336126, 336135 }
 
 local function getSpellNameAndIcon(spellID)
-    if not spellID or type(spellID) ~= "number" then
-        return nil, nil
-    end
-    
-    if C_Spell and C_Spell.GetSpellInfo then
-        local ok, info = pcall(function() return C_Spell.GetSpellInfo(spellID) end)
-        if ok and info then
-            return info.name, info.iconID
-        end
-    end
-
-    if GetSpellInfo then
-        local ok, name, _, icon = pcall(function() return GetSpellInfo(spellID) end)
-        if ok then
-            return name, icon
-        end
+    if GT and GT.GetSpellNameAndIcon then
+        return GT:GetSpellNameAndIcon(spellID)
     end
 
     return nil, nil
+end
+
+local function isCombatDataRestricted()
+    if GT and GT.IsCombatDataRestricted then
+        return GT:IsCombatDataRestricted()
+    end
+
+    return false
 end
 
 function TrinketTracker:Init()
@@ -47,6 +41,10 @@ function TrinketTracker:Reset()
 end
 
 function TrinketTracker:IsEnabled()
+    if isCombatDataRestricted() then
+        return false
+    end
+
     local settings = GT.db and GT.db.settings
     if not settings or not settings.enabled then
         return false

@@ -182,6 +182,53 @@ function GT:GetClassColor(classFile)
     return 1, 1, 1
 end
 
+function GT:GetSpellNameAndIcon(spellID)
+    if type(spellID) ~= "number" or spellID <= 0 then
+        return nil, nil
+    end
+
+    if C_Spell and C_Spell.GetSpellInfo then
+        local ok, info = pcall(function()
+            return C_Spell.GetSpellInfo(spellID)
+        end)
+        if ok and type(info) == "table" then
+            local name = info.name
+            local icon = info.iconID
+            if name or icon then
+                return name, icon
+            end
+        end
+    end
+
+    if GetSpellInfo then
+        local ok, name, _, icon = pcall(function()
+            return GetSpellInfo(spellID)
+        end)
+        if ok then
+            return name, icon
+        end
+    end
+
+    return nil, nil
+end
+
+function GT:GetSpellName(spellID, fallback)
+    local name = self:GetSpellNameAndIcon(spellID)
+    if type(name) == "string" and name ~= "" then
+        return name
+    end
+
+    if type(fallback) == "string" and fallback ~= "" then
+        return fallback
+    end
+
+    if type(spellID) == "number" and spellID > 0 then
+        return "Spell " .. tostring(spellID)
+    end
+
+    return "Unknown"
+end
+
 function GT:CreateBasicCheckbox(parent, labelText, x, y, onClick)
     local checkbox = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
     checkbox:SetPoint("TOPLEFT", x, y)

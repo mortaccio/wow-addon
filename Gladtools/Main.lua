@@ -1,6 +1,16 @@
 local ADDON_NAME, GT = ...
 
 local eventFrame = CreateFrame("Frame", "GladtoolsEventFrame")
+GT.COMBAT_LOG_SPELL_SUBEVENTS = {
+    SPELL_CAST_SUCCESS = true,
+    SPELL_AURA_APPLIED = true,
+    SPELL_AURA_REFRESH = true,
+    SPELL_AURA_REMOVED = true,
+    SPELL_AURA_BROKEN = true,
+    SPELL_AURA_BROKEN_SPELL = true,
+    SPELL_DISPEL = true,
+}
+GT.COMBAT_LOG_RESTRICTED_SAMPLE_MIN = 12
 
 function GT:InitDB()
     GladToolsDB = GladToolsDB or {}
@@ -59,6 +69,9 @@ function GT:PrintRuntimeSnapshot()
     self:Print(string.format("Frames E:%d F:%d N:%d | Casts:%d Pointers:%d", visibleEnemy, visibleFriendly, visibleNear, activeCasts, pointerCount))
     self:Print(string.format("Cooldowns: %d (%d enemy / %d friendly) | Trinkets: %d (%d enemy / %d friendly)", cdTotal, cdEnemy, cdFriendly, trinketTotal, trinketEnemy, trinketFriendly))
     self:Print(string.format("DR: %d tracked (%d active)", drTracked, drActive))
+    if self:IsCombatDataRestricted() then
+        self:Print("Combat data: restricted in current instance (Midnight PvP API mode)")
+    end
 end
 
 function GT:SetPointerModeFromSlash(value)
@@ -149,6 +162,77 @@ function GT:IsArenaContext()
     return false
 end
 
+function GT:IsCombatDataRestricted()
+    return self.combatDataRestricted and true or false
+end
+
+function GT:ResetCombatDataProbe()
+    local wasRestricted = self.combatDataRestricted and true or false
+    self.combatDataRestricted = false
+    self.combatLogSpellSamples = 0
+    self.combatLogSpellWithIDs = 0
+
+    if wasRestricted then
+        self:ApplyRuntimeEvents("combat_data_probe_reset")
+        self:IterateModules("OnSettingsChanged", "combat_data_probe_reset")
+    end
+end
+
+function GT:HandleCombatDataRestrictionDetected()
+    if self.combatDataRestricted then
+        return
+    end
+
+    self.combatDataRestricted = true
+    self:Print("Midnight restriction detected: spell-level combat data unavailable here. Cooldown, trinket, and DR tracking paused.")
+
+    if self.CooldownTracker and self.CooldownTracker.Reset then
+        self.CooldownTracker:Reset()
+    end
+    if self.TrinketTracker and self.TrinketTracker.Reset then
+        self.TrinketTracker:Reset()
+    end
+    if self.DRTracker and self.DRTracker.Reset then
+        self.DRTracker:Reset()
+    end
+    if self.NameplateOverlays and self.NameplateOverlays.Reset then
+        self.NameplateOverlays:Reset()
+    end
+    if self.Notifications and self.Notifications.Reset then
+        self.Notifications:Reset()
+    end
+
+    self:ApplyRuntimeEvents("combat_data_restricted")
+    self:IterateModules("OnSettingsChanged", "combat_data_restricted")
+end
+
+function GT:ObserveCombatLogSpellData()
+    if self:IsCombatDataRestricted() then
+        return
+    end
+
+    if not CombatLogGetCurrentEventInfo then
+        return
+    end
+
+    local _, subEvent, _, _, _, _, _, _, _, _, _, spellID = CombatLogGetCurrentEventInfo()
+    if not subEvent or not self.COMBAT_LOG_SPELL_SUBEVENTS[subEvent] then
+        return
+    end
+
+    self.combatLogSpellSamples = (self.combatLogSpellSamples or 0) + 1
+    if type(spellID) == "number" and spellID > 0 then
+        self.combatLogSpellWithIDs = (self.combatLogSpellWithIDs or 0) + 1
+        return
+    end
+
+    local samples = self.combatLogSpellSamples or 0
+    local withIDs = self.combatLogSpellWithIDs or 0
+    if samples >= self.COMBAT_LOG_RESTRICTED_SAMPLE_MIN and withIDs == 0 then
+        self:HandleCombatDataRestrictionDetected()
+    end
+end
+
 function GT:GetRuntimeEventSet()
     local events = {
         PLAYER_ENTERING_WORLD = true,
@@ -168,6 +252,7 @@ function GT:GetRuntimeEventSet()
     local notifications = settings.notifications or {}
     local nameplates = settings.nameplates or {}
     local pointers = settings.pointers or {}
+    local combatDataRestricted = self:IsCombatDataRestricted()
 
     local wantUnitFrames = (unitFrames.enemy and unitFrames.enemy.enabled)
         or (unitFrames.friendly and unitFrames.friendly.enabled)
@@ -183,6 +268,14 @@ function GT:GetRuntimeEventSet()
         and (castBars.arena or castBars.friendly or castBars.target or castBars.focus)
         and true or false
     local wantNearFrames = unitFrames.near and unitFrames.near.enabled and true or false
+    local wantCombatLogNotifications = wantNotifications and (not combatDataRestricted)
+    local wantCombatLogNameplates = wantNameplates and (not combatDataRestricted)
+
+    if combatDataRestricted then
+        wantCooldowns = false
+        wantTrinkets = false
+        wantDR = false
+    end
 
     local wantUnitMap = wantUnitFrames or wantCooldowns or wantTrinkets or wantDR or wantNotifications or wantNameplates or wantPointers or wantCastBars
     if wantUnitMap then
@@ -200,7 +293,7 @@ function GT:GetRuntimeEventSet()
         events.NAME_PLATE_UNIT_REMOVED = true
     end
 
-    if wantCooldowns or wantTrinkets or wantDR or wantNotifications or wantNameplates then
+    if wantCooldowns or wantTrinkets or wantDR or wantCombatLogNotifications or wantCombatLogNameplates then
         events.COMBAT_LOG_EVENT_UNFILTERED = true
     end
 
@@ -247,6 +340,7 @@ end
 
 function GT:Startup()
     self:InitDB()
+    self:ResetCombatDataProbe()
     self:RegisterSlashCommands()
     self:IterateModules("Init")
     
@@ -286,7 +380,12 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
     end
 
     if event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA" then
+        GT:ResetCombatDataProbe()
         GT:ApplyRuntimeEvents("zone_context")
+    end
+
+    if event == "COMBAT_LOG_EVENT_UNFILTERED" then
+        GT:ObserveCombatLogSpellData()
     end
 
     GT:IterateModules("HandleEvent", event, ...)

@@ -47,22 +47,8 @@ local function getNow()
 end
 
 local function getSpellName(spellID, fallback)
-    if not spellID or type(spellID) ~= "number" then
-        return fallback or "Unknown"
-    end
-    
-    if C_Spell and C_Spell.GetSpellInfo then
-        local ok, info = pcall(function() return C_Spell.GetSpellInfo(spellID) end)
-        if ok and info and info.name then
-            return info.name
-        end
-    end
-
-    if GetSpellInfo then
-        local ok, name = pcall(function() return GetSpellInfo(spellID) end)
-        if ok and name then
-            return name
-        end
+    if GT and GT.GetSpellName then
+        return GT:GetSpellName(spellID, fallback)
     end
 
     return fallback or ("Spell " .. tostring(spellID))
@@ -712,6 +698,10 @@ function Notifications:HandleBurstCast(sourceGUID, sourceName, sourceFlags, spel
 end
 
 function Notifications:HandleCombatLog()
+    if GT.IsCombatDataRestricted and GT:IsCombatDataRestricted() then
+        return
+    end
+
     if not CombatLogGetCurrentEventInfo then
         return
     end

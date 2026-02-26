@@ -569,4 +569,29 @@ local drLive = addon.DRTracker:GetUnitDRStates("Enemy-2")
 assert(#drLive >= 1 and drLive[1].category == "incap", "expected live DRList category alias mapping")
 assert(drLive[1].resetRemaining >= 17 and drLive[1].resetRemaining <= 18.1, "expected live DRList reset time override")
 
+for _ = 1, addon.COMBAT_LOG_RESTRICTED_SAMPLE_MIN do
+    currentCLEU = {
+        0,
+        "SPELL_AURA_APPLIED",
+        0,
+        "Enemy-1",
+        "EnemyMage",
+        COMBATLOG_OBJECT_CONTROL_PLAYER + COMBATLOG_OBJECT_REACTION_HOSTILE,
+        0,
+        "Player-1",
+        "Self",
+        COMBATLOG_OBJECT_REACTION_FRIENDLY,
+        0,
+    }
+    addon:ObserveCombatLogSpellData()
+end
+
+assert(addon:IsCombatDataRestricted(), "expected combat data restriction auto-detection")
+assert(not addon.CooldownTracker:IsEnabled(), "cooldown tracker should pause in restricted mode")
+assert(not addon.TrinketTracker:IsEnabled(), "trinket tracker should pause in restricted mode")
+assert(not addon.DRTracker:IsEnabled(), "dr tracker should pause in restricted mode")
+
+addon:ResetCombatDataProbe()
+assert(not addon:IsCombatDataRestricted(), "combat data restriction should clear on probe reset")
+
 print("Gladtools modular smoke test passed")
