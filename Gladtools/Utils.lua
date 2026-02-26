@@ -196,3 +196,15 @@ function GT:CreateBasicCheckbox(parent, labelText, x, y, onClick)
     checkbox.Text:SetJustifyH("LEFT")
     return checkbox
 end
+function GT:SafeCall(callback, ...)
+    if type(callback) ~= "function" then
+        return nil
+    end
+    
+    local ok, result = pcall(callback, ...)
+    if ok then
+        return result
+    end
+    
+    return nil
+end

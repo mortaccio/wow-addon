@@ -288,15 +288,22 @@ local function createPlateCastBar(parent)
 end
 
 function NameplateOverlays:Init()
+    if not UIParent or not CreateFrame then
+        GT:Print("UIParent not available, deferring NameplateOverlays init")
+        return
+    end
+
     self.overlaysByUnit = {}
     self.ccAurasByGUID = {}
     self.playerDebuffsByGUID = {}
     self.lastPurge = 0
 
     self.driver = CreateFrame("Frame", "GladtoolsNameplateOverlaysDriver", UIParent)
-    self.driver:SetScript("OnUpdate", function(_, elapsed)
-        NameplateOverlays:OnUpdate(elapsed)
-    end)
+    if self.driver and self.driver.SetScript then
+        self.driver:SetScript("OnUpdate", function(_, elapsed)
+            NameplateOverlays:OnUpdate(elapsed)
+        end)
+    end
 
     self.elapsed = 0
     self.playerGUID = UnitGUID and UnitGUID("player") or nil

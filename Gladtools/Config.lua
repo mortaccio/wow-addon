@@ -159,6 +159,13 @@ function GT:GetSetting(path)
     if not root then
         return nil
     end
+    
+    if type(root) ~= "table" then
+        -- Repair corrupted settings
+        self.db.settings = {}
+        return nil
+    end
+    
     return self:GetByPath(root, path)
 end
 

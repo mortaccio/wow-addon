@@ -47,16 +47,20 @@ local function getNow()
 end
 
 local function getSpellName(spellID, fallback)
+    if not spellID or type(spellID) ~= "number" then
+        return fallback or "Unknown"
+    end
+    
     if C_Spell and C_Spell.GetSpellInfo then
-        local info = C_Spell.GetSpellInfo(spellID)
-        if info and info.name then
+        local ok, info = pcall(function() return C_Spell.GetSpellInfo(spellID) end)
+        if ok and info and info.name then
             return info.name
         end
     end
 
     if GetSpellInfo then
-        local name = GetSpellInfo(spellID)
-        if name then
+        local ok, name = pcall(function() return GetSpellInfo(spellID) end)
+        if ok and name then
             return name
         end
     end
@@ -132,17 +136,35 @@ function Notifications:Init()
     self.elapsed = 0
     self.lastIncomingCCNotice = {}
 
+    if not UIParent then
+        GT:Print("UIParent not available, deferring Notifications init")
+        return
+    end
+
     self:CreateBanner()
 
-    self.driver = CreateFrame("Frame", "GladtoolsNotificationDriver", UIParent)
-    self.driver:SetScript("OnUpdate", function(_, elapsed)
-        Notifications:OnUpdate(elapsed)
-    end)
+    if CreateFrame then
+        self.driver = CreateFrame("Frame", "GladtoolsNotificationDriver", UIParent)
+        if self.driver and self.driver.SetScript then
+            self.driver:SetScript("OnUpdate", function(_, elapsed)
+                Notifications:OnUpdate(elapsed)
+            end)
+        end
+    end
+
     self:SetDriverActive(self:IsEnabled())
 end
 
 function Notifications:CreateBanner()
+    if not UIParent or not CreateFrame then
+        return
+    end
+
     local frame = CreateFrame("Frame", "GladtoolsNotificationBanner", UIParent, "BackdropTemplate")
+    if not frame then
+        return
+    end
+
     frame:SetSize(860, 34)
     frame:SetPoint("TOP", UIParent, "TOP", 0, -94)
 

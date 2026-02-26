@@ -89,13 +89,20 @@ local function createPointerFrame(unit)
 end
 
 function PointerSystem:Init()
+    if not UIParent or not CreateFrame then
+        GT:Print("UIParent not available, deferring PointerSystem init")
+        return
+    end
+
     self.pointerFrames = {}
     self.explicitTargets = {}
 
     self.driver = CreateFrame("Frame", "GladtoolsPointerDriver", UIParent)
-    self.driver:SetScript("OnUpdate", function(_, elapsed)
-        PointerSystem:OnUpdate(elapsed)
-    end)
+    if self.driver and self.driver.SetScript then
+        self.driver:SetScript("OnUpdate", function(_, elapsed)
+            PointerSystem:OnUpdate(elapsed)
+        end)
+    end
 
     self.elapsed = 0
     self:SetDriverActive(self:ShouldRunUpdates())

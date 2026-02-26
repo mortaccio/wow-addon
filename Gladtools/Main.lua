@@ -249,6 +249,21 @@ function GT:Startup()
     self:InitDB()
     self:RegisterSlashCommands()
     self:IterateModules("Init")
+    
+    -- If any module failed to init due to missing UIParent, retry after a short delay
+    local retryLoading = false
+    for _, module in ipairs(self.moduleOrder) do
+        if not module.name then
+            retryLoading = true
+            break
+        end
+    end
+    
+    if retryLoading and UIParent then
+        -- Retry initialization for modules that deferred due to missing UIParent
+        self:IterateModules("Init")
+    end
+    
     self:RegisterRuntimeEvents()
     self:OnSettingsChanged("startup")
 

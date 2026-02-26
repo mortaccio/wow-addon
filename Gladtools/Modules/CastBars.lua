@@ -182,15 +182,22 @@ local function getUnitLabel(unit)
 end
 
 function CastBars:Init()
+    if not UIParent or not CreateFrame then
+        GT:Print("UIParent not available, deferring CastBars init")
+        return
+    end
+
     self.bars = {}
     for _, unit in ipairs(trackedUnits) do
         self.bars[unit] = createCastBar(unit)
     end
 
     self.driver = CreateFrame("Frame", "GladtoolsCastBarsDriver", UIParent)
-    self.driver:SetScript("OnUpdate", function(_, elapsed)
-        CastBars:OnUpdate(elapsed)
-    end)
+    if self.driver and self.driver.SetScript then
+        self.driver:SetScript("OnUpdate", function(_, elapsed)
+            CastBars:OnUpdate(elapsed)
+        end)
+    end
 
     self.elapsed = 0
     self:SetDriverActive(self:ShouldRunUpdates())

@@ -15,16 +15,22 @@ CooldownTracker.CLEU_TRACKED_SUBEVENTS = {
 }
 
 local function getSpellNameAndIcon(spellID)
+    if not spellID or type(spellID) ~= "number" then
+        return nil, nil
+    end
+    
     if C_Spell and C_Spell.GetSpellInfo then
-        local info = C_Spell.GetSpellInfo(spellID)
-        if info then
+        local ok, info = pcall(function() return C_Spell.GetSpellInfo(spellID) end)
+        if ok and info then
             return info.name, info.iconID
         end
     end
 
     if GetSpellInfo then
-        local name, _, icon = GetSpellInfo(spellID)
-        return name, icon
+        local ok, name, _, icon = pcall(function() return GetSpellInfo(spellID) end)
+        if ok then
+            return name, icon
+        end
     end
 
     return nil, nil

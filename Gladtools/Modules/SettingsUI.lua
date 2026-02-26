@@ -111,7 +111,11 @@ end
 function SettingsUI:Init()
     self.controls = {}
     self.snapshotElapsed = 0
-    self:CreatePanel()
+    if UIParent and CreateFrame then
+        self:CreatePanel()
+    else
+        GT:Print("UIParent not available, deferring SettingsUI panel creation")
+    end
 end
 
 function SettingsUI:CreatePanel()

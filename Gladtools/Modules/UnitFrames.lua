@@ -257,6 +257,11 @@ local function formatDRNext(nextMultiplier)
 end
 
 function UnitFrames:Init()
+    if not UIParent or not CreateFrame then
+        GT:Print("UIParent not available, deferring UnitFrames init")
+        return
+    end
+
     self.frames = {
         enemy = {},
         friendly = {},
@@ -270,9 +275,11 @@ function UnitFrames:Init()
     }
 
     self.driver = CreateFrame("Frame", "GladtoolsUnitFramesDriver", UIParent)
-    self.driver:SetScript("OnUpdate", function(_, elapsed)
-        UnitFrames:OnUpdate(elapsed)
-    end)
+    if self.driver and self.driver.SetScript then
+        self.driver:SetScript("OnUpdate", function(_, elapsed)
+            UnitFrames:OnUpdate(elapsed)
+        end)
+    end
 
     self.elapsed = 0
     self:CreateAllFrames()
