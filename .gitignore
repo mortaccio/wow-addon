@@ -1,0 +1,26 @@
+# Keep repo focused on addon runtime code
+/preview/
+/tests/
+/tools/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*~
+*.swp
+*.swo
+
+# IDE folders
+.idea/
+.vscode/
+
+# Local tool/runtime artifacts
+__pycache__/
+.cache/
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+*.log
+*.tmp
+*.luac
