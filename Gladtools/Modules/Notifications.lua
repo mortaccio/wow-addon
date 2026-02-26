@@ -138,6 +138,7 @@ function Notifications:Init()
     self.driver:SetScript("OnUpdate", function(_, elapsed)
         Notifications:OnUpdate(elapsed)
     end)
+    self:SetDriverActive(self:IsEnabled())
 end
 
 function Notifications:CreateBanner()
@@ -201,6 +202,24 @@ function Notifications:IsEnabled()
     return notifications.enabled ~= false
 end
 
+function Notifications:SetDriverActive(active)
+    self.driverActive = active and true or false
+    if not self.driver then
+        return
+    end
+
+    if self.driverActive then
+        if self.driver.Show then
+            self.driver:Show()
+        end
+    else
+        self.elapsed = 0
+        if self.driver.Hide then
+            self.driver:Hide()
+        end
+    end
+end
+
 function Notifications:Reset()
     self.healerCCByGUID = {}
     self.lastBurstNotice = {}
@@ -223,7 +242,10 @@ function Notifications:IsCCSpell(spellID)
         return false
     end
 
-    local category = GT.DRTracker and GT.DRTracker.SPELL_TO_CATEGORY and GT.DRTracker.SPELL_TO_CATEGORY[spellID]
+    local category = GT.DRTracker and GT.DRTracker.GetCategoryForSpell and GT.DRTracker:GetCategoryForSpell(spellID)
+    if not category then
+        category = GT.DRTracker and GT.DRTracker.SPELL_TO_CATEGORY and GT.DRTracker.SPELL_TO_CATEGORY[spellID]
+    end
     if not category then
         return false
     end
@@ -610,7 +632,10 @@ function Notifications:HandleCCAura(subEvent, destGUID, destFlags, spellID, spel
         return
     end
 
-    local category = GT.DRTracker and GT.DRTracker.SPELL_TO_CATEGORY and GT.DRTracker.SPELL_TO_CATEGORY[spellID]
+    local category = GT.DRTracker and GT.DRTracker.GetCategoryForSpell and GT.DRTracker:GetCategoryForSpell(spellID)
+    if not category then
+        category = GT.DRTracker and GT.DRTracker.SPELL_TO_CATEGORY and GT.DRTracker.SPELL_TO_CATEGORY[spellID]
+    end
     if not category or not self.HEALER_CC_CATEGORIES[category] then
         return
     end
@@ -691,6 +716,10 @@ function Notifications:HandleCombatLog()
 end
 
 function Notifications:OnUpdate(elapsed)
+    if not self.driverActive then
+        return
+    end
+
     self.elapsed = self.elapsed + (elapsed or 0)
     if self.elapsed < self.UPDATE_INTERVAL then
         return
@@ -702,6 +731,7 @@ function Notifications:OnUpdate(elapsed)
 end
 
 function Notifications:OnSettingsChanged()
+    self:SetDriverActive(self:IsEnabled())
     if not self:IsEnabled() and self.banner then
         self.queue = {}
         self.currentNotice = nil

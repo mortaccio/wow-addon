@@ -98,6 +98,7 @@ function PointerSystem:Init()
     end)
 
     self.elapsed = 0
+    self:SetDriverActive(self:ShouldRunUpdates())
 end
 
 function PointerSystem:SetPointerTarget(unitToken, enabled)
@@ -106,7 +107,50 @@ function PointerSystem:SetPointerTarget(unitToken, enabled)
     end
 
     self.explicitTargets[unitToken] = enabled and true or nil
+    self:SetDriverActive(self:ShouldRunUpdates())
+    if GT.ApplyRuntimeEvents then
+        GT:ApplyRuntimeEvents("pointer_target")
+    end
     self:RefreshPointers()
+end
+
+function PointerSystem:ShouldRunUpdates()
+    local settings = GT.db and GT.db.settings
+    if not settings or not settings.enabled then
+        return false
+    end
+
+    local mode = settings.pointers and settings.pointers.mode or GT.POINTER_MODES.OFF
+    if mode ~= GT.POINTER_MODES.OFF then
+        return true
+    end
+
+    return next(self.explicitTargets or {}) ~= nil
+end
+
+function PointerSystem:HideAllPointers()
+    for _, pointer in pairs(self.pointerFrames or {}) do
+        pointer:Hide()
+    end
+end
+
+function PointerSystem:SetDriverActive(active)
+    self.driverActive = active and true or false
+    if not self.driver then
+        return
+    end
+
+    if self.driverActive then
+        if self.driver.Show then
+            self.driver:Show()
+        end
+    else
+        self.elapsed = 0
+        self:HideAllPointers()
+        if self.driver.Hide then
+            self.driver:Hide()
+        end
+    end
 end
 
 function PointerSystem:GetOrCreatePointer(unit)
@@ -327,6 +371,10 @@ function PointerSystem:GetVisibleCount()
 end
 
 function PointerSystem:OnUpdate(elapsed)
+    if not self.driverActive then
+        return
+    end
+
     self.elapsed = self.elapsed + (elapsed or 0)
     if self.elapsed < self.UPDATE_INTERVAL then
         return
@@ -338,6 +386,7 @@ function PointerSystem:OnUpdate(elapsed)
 end
 
 function PointerSystem:OnSettingsChanged()
+    self:SetDriverActive(self:ShouldRunUpdates())
     self:RefreshPointers()
 end
 

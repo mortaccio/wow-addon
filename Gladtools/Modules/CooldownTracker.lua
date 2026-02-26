@@ -199,6 +199,48 @@ function CooldownTracker:ShouldAcceptCast(sourceGUID, spellID, now)
     return true
 end
 
+function CooldownTracker:ForEachSpellID(value, callback)
+    if type(callback) ~= "function" then
+        return
+    end
+
+    if type(value) == "number" and value > 0 then
+        callback(value)
+        return
+    end
+
+    if type(value) ~= "table" then
+        return
+    end
+
+    for _, spellID in ipairs(value) do
+        if type(spellID) == "number" and spellID > 0 then
+            callback(spellID)
+        end
+    end
+end
+
+function CooldownTracker:ClearSharedCooldowns(guidTable, entry, spellID)
+    if not guidTable then
+        return
+    end
+
+    guidTable[spellID] = nil
+    self:ForEachSpellID(entry and entry.sharedCD, function(linkedSpellID)
+        guidTable[linkedSpellID] = nil
+    end)
+end
+
+function CooldownTracker:ApplyResetCooldowns(guidTable, entry)
+    if not guidTable then
+        return
+    end
+
+    self:ForEachSpellID(entry and entry.resetCD, function(resetSpellID)
+        guidTable[resetSpellID] = nil
+    end)
+end
+
 function CooldownTracker:TrackSpell(sourceGUID, sourceName, sourceFlags, spellID, spellName)
     if not self:IsEnabled() then
         return
@@ -254,6 +296,9 @@ function CooldownTracker:TrackSpell(sourceGUID, sourceName, sourceFlags, spellID
         guidTable = {}
         self.activeByGUID[sourceGUID] = guidTable
     end
+
+    self:ClearSharedCooldowns(guidTable, entry, spellID)
+    self:ApplyResetCooldowns(guidTable, entry)
 
     guidTable[spellID] = {
         spellID = spellID,

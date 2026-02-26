@@ -277,6 +277,55 @@ function UnitFrames:Init()
     self.elapsed = 0
     self:CreateAllFrames()
     self:RefreshLayout()
+    self:SetDriverActive(self:IsEnabled())
+end
+
+function UnitFrames:IsEnabled()
+    local settings = GT.db and GT.db.settings
+    if not settings or not settings.enabled then
+        return false
+    end
+
+    local frameSettings = settings.unitFrames
+    if type(frameSettings) ~= "table" then
+        return false
+    end
+
+    return (frameSettings.enemy and frameSettings.enemy.enabled)
+        or (frameSettings.friendly and frameSettings.friendly.enabled)
+        or (frameSettings.near and frameSettings.near.enabled)
+        or false
+end
+
+function UnitFrames:SetDriverActive(active)
+    self.driverActive = active and true or false
+    if not self.driver then
+        return
+    end
+
+    if self.driverActive then
+        if self.driver.Show then
+            self.driver:Show()
+        end
+    else
+        self.elapsed = 0
+        if self.driver.Hide then
+            self.driver:Hide()
+        end
+    end
+end
+
+function UnitFrames:HideAllFrames()
+    for _, groupFrames in pairs(self.frames or {}) do
+        for _, frame in ipairs(groupFrames) do
+            self:HideCooldownIcons(frame)
+            self:HideDRBadges(frame)
+            if frame.trinketIcon then
+                frame.trinketIcon:Hide()
+            end
+            frame:Hide()
+        end
+    end
 end
 
 function UnitFrames:GetGroupDimensions(groupName)
@@ -1076,6 +1125,10 @@ function UnitFrames:GetVisibleGroupCounts()
 end
 
 function UnitFrames:OnUpdate(elapsed)
+    if not self.driverActive then
+        return
+    end
+
     self.elapsed = self.elapsed + (elapsed or 0)
     if self.elapsed < self.UPDATE_INTERVAL then
         return
@@ -1087,7 +1140,12 @@ end
 
 function UnitFrames:OnSettingsChanged()
     self:RefreshLayout()
-    self:UpdateAll()
+    self:SetDriverActive(self:IsEnabled())
+    if self.driverActive then
+        self:UpdateAll()
+    else
+        self:HideAllFrames()
+    end
 end
 
 function UnitFrames:HandleEvent(event)

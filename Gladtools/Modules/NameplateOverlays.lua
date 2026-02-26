@@ -302,6 +302,7 @@ function NameplateOverlays:Init()
     self.playerGUID = UnitGUID and UnitGUID("player") or nil
 
     self:ScanVisiblePlates()
+    self:SetDriverActive(self:IsEnabled())
 end
 
 function NameplateOverlays:GetSettings()
@@ -320,6 +321,24 @@ function NameplateOverlays:IsEnabled()
     end
 
     return plateSettings.enabled ~= false
+end
+
+function NameplateOverlays:SetDriverActive(active)
+    self.driverActive = active and true or false
+    if not self.driver then
+        return
+    end
+
+    if self.driverActive then
+        if self.driver.Show then
+            self.driver:Show()
+        end
+    else
+        self.elapsed = 0
+        if self.driver.Hide then
+            self.driver:Hide()
+        end
+    end
 end
 
 function NameplateOverlays:Reset()
@@ -1057,7 +1076,10 @@ function NameplateOverlays:TrackCCAura(subEvent, destGUID, destFlags, spellID, s
         return
     end
 
-    local category = GT.DRTracker and GT.DRTracker.SPELL_TO_CATEGORY and GT.DRTracker.SPELL_TO_CATEGORY[spellID]
+    local category = GT.DRTracker and GT.DRTracker.GetCategoryForSpell and GT.DRTracker:GetCategoryForSpell(spellID)
+    if not category then
+        category = GT.DRTracker and GT.DRTracker.SPELL_TO_CATEGORY and GT.DRTracker.SPELL_TO_CATEGORY[spellID]
+    end
     if not category or not self.CC_CATEGORIES[category] then
         return
     end
@@ -1149,6 +1171,10 @@ function NameplateOverlays:HandleCombatLog()
 end
 
 function NameplateOverlays:OnUpdate(elapsed)
+    if not self.driverActive then
+        return
+    end
+
     self.elapsed = self.elapsed + (elapsed or 0)
     if self.elapsed < self.UPDATE_INTERVAL then
         return
@@ -1161,6 +1187,7 @@ function NameplateOverlays:OnUpdate(elapsed)
 end
 
 function NameplateOverlays:OnSettingsChanged()
+    self:SetDriverActive(self:IsEnabled())
     if not self:IsEnabled() then
         for _, overlay in pairs(self.overlaysByUnit) do
             self:HideOverlay(overlay)

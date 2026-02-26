@@ -193,6 +193,34 @@ function CastBars:Init()
     end)
 
     self.elapsed = 0
+    self:SetDriverActive(self:ShouldRunUpdates())
+end
+
+function CastBars:ShouldRunUpdates()
+    local castSettings = GT:GetSetting({ "castBars" })
+    if not castSettings or not castSettings.enabled then
+        return false
+    end
+
+    return (castSettings.arena or castSettings.friendly or castSettings.target or castSettings.focus) and true or false
+end
+
+function CastBars:SetDriverActive(active)
+    self.driverActive = active and true or false
+    if not self.driver then
+        return
+    end
+
+    if self.driverActive then
+        if self.driver.Show then
+            self.driver:Show()
+        end
+    else
+        self.elapsed = 0
+        if self.driver.Hide then
+            self.driver:Hide()
+        end
+    end
 end
 
 function CastBars:IsEnabledForUnit(unit)
@@ -410,6 +438,10 @@ function CastBars:UpdateActiveBar(bar, now)
 end
 
 function CastBars:OnUpdate(elapsed)
+    if not self.driverActive then
+        return
+    end
+
     self.elapsed = self.elapsed + (elapsed or 0)
     if self.elapsed < self.UPDATE_INTERVAL then
         return
@@ -424,6 +456,7 @@ function CastBars:OnUpdate(elapsed)
 end
 
 function CastBars:OnSettingsChanged()
+    self:SetDriverActive(self:ShouldRunUpdates())
     for unit, bar in pairs(self.bars) do
         if self:IsEnabledForUnit(unit) then
             self:AnchorBar(unit)

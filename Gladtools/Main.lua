@@ -17,6 +17,7 @@ end
 
 function GT:OnSettingsChanged(reason)
     self:EvaluatePresetState()
+    self:ApplyRuntimeEvents(reason or "settings_changed")
     self:IterateModules("OnSettingsChanged", reason)
 end
 
@@ -126,41 +127,122 @@ function GT:RegisterSlashCommands()
 end
 
 function GT:RegisterRuntimeEvents()
-    if self.runtimeEventsRegistered then
-        return
+    self:ApplyRuntimeEvents("startup")
+end
+
+function GT:IsArenaContext()
+    if IsActiveBattlefieldArena and IsActiveBattlefieldArena() then
+        return true
     end
 
+    if C_PvP and C_PvP.IsArena and C_PvP.IsArena() then
+        return true
+    end
+
+    if IsInInstance then
+        local inInstance, instanceType = IsInInstance()
+        if inInstance and (instanceType == "arena" or instanceType == "pvp") then
+            return true
+        end
+    end
+
+    return false
+end
+
+function GT:GetRuntimeEventSet()
     local events = {
-        "ARENA_OPPONENT_UPDATE",
-        "ARENA_PREP_OPPONENT_SPECIALIZATIONS",
-        "COMBAT_LOG_EVENT_UNFILTERED",
-        "GROUP_ROSTER_UPDATE",
-        "NAME_PLATE_UNIT_ADDED",
-        "NAME_PLATE_UNIT_REMOVED",
-        "PLAYER_ENTERING_WORLD",
-        "PLAYER_FOCUS_CHANGED",
-        "PLAYER_TARGET_CHANGED",
-        "UNIT_FACTION",
-        "UNIT_NAME_UPDATE",
-        "UNIT_PET",
-        "UNIT_TARGET",
-        "UNIT_SPELLCAST_START",
-        "UNIT_SPELLCAST_SUCCEEDED",
-        "UNIT_SPELLCAST_STOP",
-        "UNIT_SPELLCAST_FAILED",
-        "UNIT_SPELLCAST_INTERRUPTED",
-        "UNIT_SPELLCAST_CHANNEL_START",
-        "UNIT_SPELLCAST_CHANNEL_STOP",
-        "UNIT_SPELLCAST_CHANNEL_UPDATE",
-        "UNIT_SPELLCAST_DELAYED",
-        "ZONE_CHANGED_NEW_AREA",
+        PLAYER_ENTERING_WORLD = true,
+        ZONE_CHANGED_NEW_AREA = true,
     }
 
-    for _, eventName in ipairs(events) do
-        eventFrame:RegisterEvent(eventName)
+    local settings = self.db and self.db.settings
+    if not settings or settings.enabled == false then
+        return events
     end
 
-    self.runtimeEventsRegistered = true
+    local unitFrames = settings.unitFrames or {}
+    local cooldowns = unitFrames.cooldowns or {}
+    local castBars = settings.castBars or {}
+    local dr = settings.dr or {}
+    local trinkets = settings.trinkets or {}
+    local notifications = settings.notifications or {}
+    local nameplates = settings.nameplates or {}
+    local pointers = settings.pointers or {}
+
+    local wantUnitFrames = (unitFrames.enemy and unitFrames.enemy.enabled)
+        or (unitFrames.friendly and unitFrames.friendly.enabled)
+        or (unitFrames.near and unitFrames.near.enabled)
+    local wantCooldowns = cooldowns.enabled and (cooldowns.showEnemy or cooldowns.showFriendly)
+    local wantTrinkets = trinkets.enabled ~= false
+    local wantDR = dr.enabled and true or false
+    local wantNotifications = notifications.enabled ~= false
+    local wantNameplates = nameplates.enabled ~= false
+    local hasExplicitPointers = self.PointerSystem and self.PointerSystem.explicitTargets and next(self.PointerSystem.explicitTargets) ~= nil
+    local wantPointers = ((pointers.mode and pointers.mode ~= self.POINTER_MODES.OFF) or hasExplicitPointers) and true or false
+    local wantCastBars = castBars.enabled
+        and (castBars.arena or castBars.friendly or castBars.target or castBars.focus)
+        and true or false
+    local wantNearFrames = unitFrames.near and unitFrames.near.enabled and true or false
+
+    local wantUnitMap = wantUnitFrames or wantCooldowns or wantTrinkets or wantDR or wantNotifications or wantNameplates or wantPointers or wantCastBars
+    if wantUnitMap then
+        events.GROUP_ROSTER_UPDATE = true
+        events.PLAYER_FOCUS_CHANGED = true
+        events.PLAYER_TARGET_CHANGED = true
+        events.UNIT_FACTION = true
+        events.UNIT_NAME_UPDATE = true
+        events.UNIT_PET = true
+        events.UNIT_TARGET = true
+    end
+
+    if wantNameplates or wantNearFrames or wantPointers then
+        events.NAME_PLATE_UNIT_ADDED = true
+        events.NAME_PLATE_UNIT_REMOVED = true
+    end
+
+    if wantCooldowns or wantTrinkets or wantDR or wantNotifications or wantNameplates then
+        events.COMBAT_LOG_EVENT_UNFILTERED = true
+    end
+
+    if wantCooldowns or wantNotifications or wantCastBars then
+        events.UNIT_SPELLCAST_START = true
+        events.UNIT_SPELLCAST_SUCCEEDED = true
+        events.UNIT_SPELLCAST_STOP = true
+        events.UNIT_SPELLCAST_FAILED = true
+        events.UNIT_SPELLCAST_INTERRUPTED = true
+        events.UNIT_SPELLCAST_CHANNEL_START = true
+        events.UNIT_SPELLCAST_CHANNEL_STOP = true
+        events.UNIT_SPELLCAST_CHANNEL_UPDATE = true
+        events.UNIT_SPELLCAST_DELAYED = true
+    end
+
+    if self:IsArenaContext() then
+        events.ARENA_OPPONENT_UPDATE = true
+        events.ARENA_PREP_OPPONENT_SPECIALIZATIONS = true
+    end
+
+    return events
+end
+
+function GT:ApplyRuntimeEvents()
+    local desired = self:GetRuntimeEventSet()
+    local active = self.activeRuntimeEvents or {}
+
+    if eventFrame.UnregisterEvent then
+        for eventName in pairs(active) do
+            if not desired[eventName] then
+                eventFrame:UnregisterEvent(eventName)
+            end
+        end
+    end
+
+    for eventName in pairs(desired) do
+        if not active[eventName] then
+            eventFrame:RegisterEvent(eventName)
+        end
+    end
+
+    self.activeRuntimeEvents = desired
 end
 
 function GT:Startup()
@@ -186,6 +268,10 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 
     if not GT.initialized then
         return
+    end
+
+    if event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA" then
+        GT:ApplyRuntimeEvents("zone_context")
     end
 
     GT:IterateModules("HandleEvent", event, ...)
