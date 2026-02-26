@@ -1,4 +1,4 @@
-## Interface: 110200
+## Interface: 120001, 120000, 110200
 ## Title: Gladtools
 ## Notes: Arena-focused PvP cooldown, trinket, cast bar, and pointer tracker
 ## Author: asenic
