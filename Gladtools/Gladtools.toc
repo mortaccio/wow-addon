@@ -20,6 +20,7 @@ Modules/NameplateOverlays.lua
 Modules/UnitFrames.lua
 Modules/CastBars.lua
 Modules/PointerSystem.lua
+Modules/RaidHUD.lua
 Modules/SettingsUI.lua
 
 Main.lua

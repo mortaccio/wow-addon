@@ -65,10 +65,15 @@ function GT:PrintRuntimeSnapshot()
 
     local activeCasts = self.CastBars and self.CastBars.GetActiveCount and self.CastBars:GetActiveCount() or 0
     local pointerCount = self.PointerSystem and self.PointerSystem.GetVisibleCount and self.PointerSystem:GetVisibleCount() or 0
+    local raidHUDAttached, raidHUDVisible = 0, 0
+    if self.RaidHUD and self.RaidHUD.GetAttachedCounts then
+        raidHUDAttached, raidHUDVisible = self.RaidHUD:GetAttachedCounts()
+    end
 
     self:Print(string.format("Frames E:%d F:%d N:%d | Casts:%d Pointers:%d", visibleEnemy, visibleFriendly, visibleNear, activeCasts, pointerCount))
     self:Print(string.format("Cooldowns: %d (%d enemy / %d friendly) | Trinkets: %d (%d enemy / %d friendly)", cdTotal, cdEnemy, cdFriendly, trinketTotal, trinketEnemy, trinketFriendly))
     self:Print(string.format("DR: %d tracked (%d active)", drTracked, drActive))
+    self:Print(string.format("Raid HUD: %d attached (%d visible)", raidHUDAttached, raidHUDVisible))
     if self:IsCombatDataRestricted() then
         self:Print("Combat data: restricted in current instance (Midnight PvP API mode)")
     end
@@ -252,6 +257,7 @@ function GT:GetRuntimeEventSet()
     local notifications = settings.notifications or {}
     local nameplates = settings.nameplates or {}
     local pointers = settings.pointers or {}
+    local raidHUD = settings.raidHUD or {}
     local combatDataRestricted = self:IsCombatDataRestricted()
 
     local wantUnitFrames = (unitFrames.enemy and unitFrames.enemy.enabled)
@@ -270,6 +276,7 @@ function GT:GetRuntimeEventSet()
     local wantNearFrames = unitFrames.near and unitFrames.near.enabled and true or false
     local wantCombatLogNotifications = wantNotifications and (not combatDataRestricted)
     local wantCombatLogNameplates = wantNameplates and (not combatDataRestricted)
+    local wantRaidHUD = raidHUD.enabled and true or false
 
     if combatDataRestricted then
         wantCooldowns = false
@@ -291,6 +298,20 @@ function GT:GetRuntimeEventSet()
     if wantNameplates or wantNearFrames or wantPointers then
         events.NAME_PLATE_UNIT_ADDED = true
         events.NAME_PLATE_UNIT_REMOVED = true
+    end
+
+    if wantRaidHUD then
+        events.GROUP_ROSTER_UPDATE = true
+        events.UNIT_AURA = true
+        events.UNIT_HEALTH = true
+        events.UNIT_MAXHEALTH = true
+        events.UNIT_CONNECTION = true
+        events.UNIT_NAME_UPDATE = true
+        events.UNIT_FACTION = true
+        events.UNIT_TARGET = true
+        events.PLAYER_REGEN_DISABLED = true
+        events.PLAYER_REGEN_ENABLED = true
+        events.PLAYER_LOGIN = true
     end
 
     if wantCooldowns or wantTrinkets or wantDR or wantCombatLogNotifications or wantCombatLogNameplates then

@@ -255,6 +255,7 @@ local files = {
     "Gladtools/Modules/UnitFrames.lua",
     "Gladtools/Modules/CastBars.lua",
     "Gladtools/Modules/PointerSystem.lua",
+    "Gladtools/Modules/RaidHUD.lua",
     "Gladtools/Modules/SettingsUI.lua",
     "Gladtools/Main.lua",
 }
@@ -269,6 +270,23 @@ addon:Startup()
 
 assert(addon.db.selectedPreset == "healer", "default selected preset should be healer")
 assert(addon.db.presetState == "healer", "default preset state should be healer")
+assert(addon.RaidHUD ~= nil, "raid hud module should be registered")
+
+local raidHUDSettings = addon:GetSetting({ "raidHUD" })
+assert(type(raidHUDSettings) == "table" and raidHUDSettings.enabled == true, "raid hud defaults should be enabled")
+assert(type(raidHUDSettings.cooldowns.defensiveSpells) == "table" and #raidHUDSettings.cooldowns.defensiveSpells > 0, "raid hud defensive spell defaults missing")
+assert(type(raidHUDSettings.cc.spells) == "table" and #raidHUDSettings.cc.spells > 0, "raid hud cc spell defaults missing")
+
+local defensiveLookup, hasDefensiveLookup = addon.RaidHUD:BuildSpellLookup({ 871, 33206 })
+assert(hasDefensiveLookup and defensiveLookup[871] and defensiveLookup[33206], "raid hud spell lookup should include configured spell IDs")
+assert(addon.RaidHUD:IsDefensiveEntry({ spellID = 871, category = "defensive" }, { hasDefensiveLookup = false }), "defensive category should pass fallback defensive filter")
+assert(not addon.RaidHUD:IsDefensiveEntry({ spellID = 900001, category = "utility" }, { hasDefensiveLookup = true, defensiveLookup = {} }), "non-configured spell should fail explicit defensive filter")
+
+local ccConfigured, ccCategory = addon.RaidHUD:IsCCAura({ spellID = 118 }, { hasCCLookup = true, ccLookup = { [118] = true }, ccCategories = {} })
+assert(ccConfigured and ccCategory == "incap", "configured cc spell should be detected and mapped to incap category")
+
+local ccByCategory = addon.RaidHUD:IsCCAura({ spellID = 408 }, { hasCCLookup = false, ccLookup = {}, ccCategories = { stun = true } })
+assert(ccByCategory, "cc aura should match enabled DR category when explicit list is not provided")
 
 addon:ApplyPreset("dps")
 assert(addon:GetSetting({ "pointers", "mode" }) == addon.POINTER_MODES.HEALERS_ONLY, "dps pointer mode mismatch")

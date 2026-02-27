@@ -181,9 +181,9 @@ function SettingsUI:CreatePanel()
 
     self.cards = self.cards or {}
     self.cards.presets = createCard(panel, 16, -68, 426, 86)
-    self.cards.core = createCard(panel, 16, -162, 426, 372)
-    self.cards.display = createCard(panel, 456, -68, 298, 250)
-    self.cards.snapshot = createCard(panel, 456, -328, 298, 154, "Live Arena Snapshot", "Current runtime activity")
+    self.cards.core = createCard(panel, 16, -162, 426, 530)
+    self.cards.display = createCard(panel, 456, -68, 298, 410)
+    self.cards.snapshot = createCard(panel, 456, -488, 298, 154, "Live Arena Snapshot", "Current runtime activity")
 
     createSectionHeader(panel, "Presets", 20, -76)
 
@@ -268,6 +268,26 @@ function SettingsUI:CreatePanel()
         GT:SetSetting({ "nameplates", "showCooldowns" }, value, "settings_ui")
     end)
 
+    self.controls.enableRaidHUD = GT:CreateBasicCheckbox(panel, "Attach HUD to Blizzard raid frames", 20, -554, function(value)
+        GT:SetSetting({ "raidHUD", "enabled" }, value, "settings_ui")
+    end)
+
+    self.controls.raidHUDCooldowns = GT:CreateBasicCheckbox(panel, "Raid HUD: defensive cooldown icons", 20, -582, function(value)
+        GT:SetSetting({ "raidHUD", "cooldowns", "enabled" }, value, "settings_ui")
+    end)
+
+    self.controls.raidHUDPointer = GT:CreateBasicCheckbox(panel, "Raid HUD: class-color pointer", 20, -610, function(value)
+        GT:SetSetting({ "raidHUD", "pointer", "enabled" }, value, "settings_ui")
+    end)
+
+    self.controls.raidHUDCC = GT:CreateBasicCheckbox(panel, "Raid HUD: CC debuff icons", 20, -638, function(value)
+        GT:SetSetting({ "raidHUD", "cc", "enabled" }, value, "settings_ui")
+    end)
+
+    self.controls.raidHUDBlizzardOnly = GT:CreateBasicCheckbox(panel, "Raid HUD: attach only Blizzard compact frames", 20, -666, function(value)
+        GT:SetSetting({ "raidHUD", "attachOnlyBlizzard" }, value, "settings_ui")
+    end)
+
     createSectionHeader(panel, "Display", 460, -76)
 
     self.controls.pointerModeButton = createButton(panel, "Pointer Mode", 460, -104, 220, function()
@@ -300,8 +320,16 @@ function SettingsUI:CreatePanel()
         GT:SetSetting({ "unitFrames", "cooldowns", "maxIcons" }, value, "settings_ui")
     end)
 
+    self.controls.raidHUDCooldownSize = createSlider(panel, "Raid HUD Cooldown Size", 460, -364, 16, 48, 1, function(value)
+        GT:SetSetting({ "raidHUD", "cooldowns", "iconSize" }, value, "settings_ui")
+    end)
+
+    self.controls.raidHUDPointerSize = createSlider(panel, "Raid HUD Pointer Size", 460, -432, 18, 64, 1, function(value)
+        GT:SetSetting({ "raidHUD", "pointer", "size" }, value, "settings_ui")
+    end)
+
     self.controls.runtimeSnapshot = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    self.controls.runtimeSnapshot:SetPoint("TOPLEFT", 468, -360)
+    self.controls.runtimeSnapshot:SetPoint("TOPLEFT", 468, -520)
     self.controls.runtimeSnapshot:SetWidth(282)
     self.controls.runtimeSnapshot:SetJustifyH("LEFT")
     if self.controls.runtimeSnapshot.SetJustifyV then
@@ -346,6 +374,10 @@ function SettingsUI:BuildRuntimeSnapshotText()
 
     local activeCasts = GT.CastBars and GT.CastBars.GetActiveCount and GT.CastBars:GetActiveCount() or 0
     local pointers = GT.PointerSystem and GT.PointerSystem.GetVisibleCount and GT.PointerSystem:GetVisibleCount() or 0
+    local raidHUDAttached, raidHUDVisible = 0, 0
+    if GT.RaidHUD and GT.RaidHUD.GetAttachedCounts then
+        raidHUDAttached, raidHUDVisible = GT.RaidHUD:GetAttachedCounts()
+    end
 
     local lines = {
         "Preset: " .. GT:GetPresetStateLabel() .. "    Addon: " .. enabledTag(GT:GetSetting({ "enabled" })),
@@ -354,6 +386,7 @@ function SettingsUI:BuildRuntimeSnapshotText()
         string.format("Trinkets   %d total  (%d enemy / %d friendly)", trinketTotal, trinketEnemy, trinketFriendly),
         string.format("DR States  %d tracked  (%d active)", drTracked, drActive),
         string.format("Cast Bars  %d active    Pointers %d", activeCasts, pointers),
+        string.format("Raid HUD   %d attached  (%d visible)", raidHUDAttached, raidHUDVisible),
     }
 
     return table.concat(lines, "\n")
@@ -401,6 +434,16 @@ function SettingsUI:RefreshControls()
     self.controls.showFriendlyPlates:SetChecked(plateSettings.showFriendly and true or false)
     self.controls.showPlateCooldowns:SetChecked(plateSettings.showCooldowns ~= false)
 
+    local raidHUD = settings.raidHUD or {}
+    local raidHUDCooldowns = raidHUD.cooldowns or {}
+    local raidHUDPointer = raidHUD.pointer or {}
+    local raidHUDCC = raidHUD.cc or {}
+    self.controls.enableRaidHUD:SetChecked(raidHUD.enabled and true or false)
+    self.controls.raidHUDCooldowns:SetChecked(raidHUDCooldowns.enabled ~= false)
+    self.controls.raidHUDPointer:SetChecked(raidHUDPointer.enabled ~= false)
+    self.controls.raidHUDCC:SetChecked(raidHUDCC.enabled ~= false)
+    self.controls.raidHUDBlizzardOnly:SetChecked(raidHUD.attachOnlyBlizzard ~= false)
+
     local pointerMode = settings.pointers.mode or GT.POINTER_MODES.OFF
     local pointerLabel = GT.POINTER_MODE_LABELS[pointerMode] or pointerMode
     self.controls.pointerModeButton:SetText("Pointer Mode: " .. pointerLabel)
@@ -422,6 +465,18 @@ function SettingsUI:RefreshControls()
     self.controls.maxIcons:SetValue(maxIcons)
     self.controls.maxIcons.suspendCallback = false
     self.controls.maxIcons.valueText:SetText(tostring(maxIcons))
+
+    local raidHUDCooldownSize = raidHUDCooldowns.iconSize or 26
+    self.controls.raidHUDCooldownSize.suspendCallback = true
+    self.controls.raidHUDCooldownSize:SetValue(raidHUDCooldownSize)
+    self.controls.raidHUDCooldownSize.suspendCallback = false
+    self.controls.raidHUDCooldownSize.valueText:SetText(tostring(raidHUDCooldownSize))
+
+    local raidHUDPointerSize = raidHUDPointer.size or 34
+    self.controls.raidHUDPointerSize.suspendCallback = true
+    self.controls.raidHUDPointerSize:SetValue(raidHUDPointerSize)
+    self.controls.raidHUDPointerSize.suspendCallback = false
+    self.controls.raidHUDPointerSize.valueText:SetText(tostring(raidHUDPointerSize))
 
     self:RefreshRuntimeSnapshot()
 end

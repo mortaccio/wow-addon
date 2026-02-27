@@ -23,6 +23,88 @@ GT.PRESET_ORDER = {
     "dps",
 }
 
+local DEFAULT_RAID_HUD_DEFENSIVE_SPELLS = {
+    642,    -- Divine Shield
+    871,    -- Shield Wall
+    48707,  -- Anti-Magic Shell
+    22812,  -- Barkskin
+    33206,  -- Pain Suppression
+    45438,  -- Ice Block
+    47585,  -- Dispersion
+    61336,  -- Survival Instincts
+    104773, -- Unending Resolve
+    108271, -- Astral Shift
+    115203, -- Fortifying Brew
+    118038, -- Die by the Sword
+    186265, -- Aspect of the Turtle
+    196555, -- Netherwalk
+    198589, -- Blur
+    31224,  -- Cloak of Shadows
+}
+
+local DEFAULT_RAID_HUD_CC_SPELLS = {
+    118,    -- Polymorph
+    408,    -- Kidney Shot
+    853,    -- Hammer of Justice
+    1776,   -- Gouge
+    1833,   -- Cheap Shot
+    3355,   -- Freezing Trap
+    5211,   -- Mighty Bash
+    5782,   -- Fear
+    8122,   -- Psychic Scream
+    33786,  -- Cyclone
+    51514,  -- Hex
+    108194, -- Asphyxiate
+    119381, -- Leg Sweep
+    20066,  -- Repentance
+    217832, -- Imprison
+}
+
+local function createRaidHUDDefaults()
+    return {
+        enabled = true,
+        attachOnlyBlizzard = true,
+        cooldowns = {
+            enabled = true,
+            showEnemy = true,
+            showFriendly = true,
+            iconSize = 26,
+            maxIcons = 3,
+            offsetX = 6,
+            offsetY = 0,
+            defensiveSpells = GT:DeepCopy(DEFAULT_RAID_HUD_DEFENSIVE_SPELLS),
+        },
+        pointer = {
+            enabled = true,
+            size = 34,
+            offsetX = 0,
+            offsetY = 2,
+            rotationDegrees = 180,
+            fallbackColor = { 0.84, 0.84, 0.86 },
+        },
+        cc = {
+            enabled = true,
+            showEnemy = true,
+            showFriendly = true,
+            iconSize = 22,
+            maxIcons = 2,
+            anchorSide = "left",
+            offsetX = -6,
+            offsetY = 0,
+            fallbackDuration = 8,
+            spells = GT:DeepCopy(DEFAULT_RAID_HUD_CC_SPELLS),
+            categories = {
+                stun = true,
+                incap = true,
+                fear = true,
+                silence = true,
+                root = true,
+                disarm = true,
+            },
+        },
+    }
+end
+
 GT.PRESETS = {
     healer = {
         label = "Healer",
@@ -83,6 +165,7 @@ GT.PRESETS = {
                 showCastBars = true,
                 showCooldowns = true,
             },
+            raidHUD = createRaidHUDDefaults(),
         },
     },
     dps = {
@@ -144,6 +227,7 @@ GT.PRESETS = {
                 showCastBars = true,
                 showCooldowns = true,
             },
+            raidHUD = createRaidHUDDefaults(),
         },
     },
 }
