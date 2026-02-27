@@ -161,25 +161,14 @@ function Notifications:CreateBanner()
         frame:SetFrameLevel(30)
     end
 
-    if frame.SetBackdrop then
-        frame:SetBackdrop({
-            bgFile = "Interface/Buttons/WHITE8x8",
-            edgeFile = "Interface/Buttons/WHITE8x8",
-            edgeSize = 1,
-            insets = { left = 1, right = 1, top = 1, bottom = 1 },
-        })
-        frame:SetBackdropColor(0.08, 0.03, 0.03, 0.84)
-        if frame.SetBackdropBorderColor then
-            frame:SetBackdropBorderColor(0.62, 0.16, 0.16, 0.95)
-        end
-    end
+    GT:ApplyWoWBackdrop(frame, "alert")
 
     frame.accent = frame:CreateTexture(nil, "BORDER")
-    frame.accent:SetTexture("Interface/Buttons/WHITE8x8")
+    frame.accent:SetTexture("Interface/Tooltips/UI-Tooltip-Background")
     frame.accent:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
     frame.accent:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -1, -1)
     frame.accent:SetHeight(2)
-    setTextureColor(frame.accent, 1, 0.25, 0.25, 0.90)
+    setTextureColor(frame.accent, 1, 0.82, 0.45, 0.88)
 
     frame.text = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     frame.text:SetPoint("CENTER", frame, "CENTER", 0, -1)

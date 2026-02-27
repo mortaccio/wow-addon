@@ -161,14 +161,7 @@ local function createAuraIcon(parent, size)
     local icon = CreateFrame("Frame", nil, parent, "BackdropTemplate")
     icon:SetSize(size, size)
 
-    if icon.SetBackdrop then
-        icon:SetBackdrop({
-            bgFile = "Interface/Buttons/WHITE8x8",
-            edgeFile = "Interface/Buttons/WHITE8x8",
-            edgeSize = 1,
-        })
-        icon:SetBackdropColor(0.02, 0.02, 0.02, 0.90)
-    end
+    GT:ApplyWoWBackdrop(icon, "icon")
 
     icon.texture = icon:CreateTexture(nil, "ARTWORK")
     icon.texture:SetAllPoints(icon)
@@ -222,17 +215,7 @@ local function createPlateCastBar(parent)
     bar:SetSize(130, 14)
     bar:SetPoint("TOP", parent, "BOTTOM", 0, -6)
 
-    if bar.SetBackdrop then
-        bar:SetBackdrop({
-            bgFile = "Interface/Buttons/WHITE8x8",
-            edgeFile = "Interface/Buttons/WHITE8x8",
-            edgeSize = 1,
-        })
-        bar:SetBackdropColor(0.03, 0.03, 0.04, 0.90)
-        if bar.SetBackdropBorderColor then
-            bar:SetBackdropBorderColor(0.18, 0.18, 0.20, 0.95)
-        end
-    end
+    GT:ApplyWoWBackdrop(bar, "inset")
 
     bar.icon = bar:CreateTexture(nil, "ARTWORK")
     bar.icon:SetPoint("TOPLEFT", bar, "TOPLEFT", 2, -2)
@@ -242,13 +225,13 @@ local function createPlateCastBar(parent)
     end
 
     bar.bg = bar:CreateTexture(nil, "BACKGROUND")
-    bar.bg:SetTexture("Interface/Buttons/WHITE8x8")
+    bar.bg:SetTexture("Interface/Tooltips/UI-Tooltip-Background")
     bar.bg:SetPoint("TOPLEFT", bar, "TOPLEFT", 16, -2)
     bar.bg:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", -2, 2)
     setTextureColor(bar.bg, 0.09, 0.09, 0.10, 0.96)
 
     bar.status = CreateFrame("StatusBar", nil, bar)
-    bar.status:SetStatusBarTexture("Interface/Buttons/WHITE8x8")
+    GT:ApplyWoWStatusBarTexture(bar.status)
     bar.status:SetPoint("TOPLEFT", bar.bg, "TOPLEFT", 0, 0)
     bar.status:SetPoint("BOTTOMRIGHT", bar.bg, "BOTTOMRIGHT", 0, 0)
     bar.status:SetMinMaxValues(0, 1)

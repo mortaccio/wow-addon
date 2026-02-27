@@ -38,14 +38,14 @@ local function applyBarColor(bar, color, borderAlpha)
     local g = color and color[2] or 0.7
     local b = color and color[3] or 0.2
 
-    bar.statusBar:SetStatusBarColor(r, g, b, 0.95)
+    bar.statusBar:SetStatusBarColor(r, g, b, 0.92)
     setTextureColor(bar.statusBG, (r * 0.20) + 0.05, (g * 0.20) + 0.05, (b * 0.20) + 0.05, 0.95)
     if bar.topAccent then
-        setTextureColor(bar.topAccent, r, g, b, 0.95)
+        setTextureColor(bar.topAccent, r, g, b, 0.60)
     end
 
     if bar.SetBackdropBorderColor then
-        bar:SetBackdropBorderColor((r * 0.46) + 0.10, (g * 0.46) + 0.10, (b * 0.46) + 0.10, borderAlpha or 0.95)
+        bar:SetBackdropBorderColor((r * 0.30) + 0.34, (g * 0.30) + 0.34, (b * 0.30) + 0.34, borderAlpha or 0.98)
     end
 end
 
@@ -53,23 +53,13 @@ local function createCastBar(unit)
     local frame = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
     frame:SetSize(252, 18)
 
-    if frame.SetBackdrop then
-        frame:SetBackdrop({
-            bgFile = "Interface/Buttons/WHITE8x8",
-            edgeFile = "Interface/Buttons/WHITE8x8",
-            edgeSize = 1,
-        })
-        frame:SetBackdropColor(0.03, 0.03, 0.04, 0.88)
-        if frame.SetBackdropBorderColor then
-            frame:SetBackdropBorderColor(0.18, 0.18, 0.20, 0.95)
-        end
-    end
+    GT:ApplyWoWBackdrop(frame, "inset")
 
     frame.iconBG = frame:CreateTexture(nil, "BACKGROUND")
-    frame.iconBG:SetTexture("Interface/Buttons/WHITE8x8")
+    frame.iconBG:SetTexture("Interface/Tooltips/UI-Tooltip-Background")
     frame.iconBG:SetPoint("TOPLEFT", frame, "TOPLEFT", 2, -2)
     frame.iconBG:SetPoint("BOTTOMRIGHT", frame, "BOTTOMLEFT", 18, 2)
-    setTextureColor(frame.iconBG, 0.02, 0.02, 0.02, 0.86)
+    setTextureColor(frame.iconBG, 0.08, 0.08, 0.10, 0.90)
 
     frame.icon = frame:CreateTexture(nil, "ARTWORK")
     frame.icon:SetPoint("TOPLEFT", frame, "TOPLEFT", 3, -3)
@@ -79,29 +69,29 @@ local function createCastBar(unit)
     end
 
     frame.statusBG = frame:CreateTexture(nil, "BORDER")
-    frame.statusBG:SetTexture("Interface/Buttons/WHITE8x8")
+    frame.statusBG:SetTexture("Interface/Tooltips/UI-Tooltip-Background")
     frame.statusBG:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -2)
     frame.statusBG:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -2, 2)
     setTextureColor(frame.statusBG, 0.09, 0.09, 0.10, 0.95)
 
     frame.topAccent = frame:CreateTexture(nil, "BORDER")
-    frame.topAccent:SetTexture("Interface/Buttons/WHITE8x8")
+    frame.topAccent:SetTexture("Interface/Tooltips/UI-Tooltip-Background")
     frame.topAccent:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
     frame.topAccent:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -1, -1)
     frame.topAccent:SetHeight(2)
-    setTextureColor(frame.topAccent, 0.58, 0.58, 0.62, 0.95)
+    setTextureColor(frame.topAccent, 0.86, 0.78, 0.48, 0.65)
 
     frame.statusBar = CreateFrame("StatusBar", nil, frame)
-    frame.statusBar:SetStatusBarTexture("Interface/Buttons/WHITE8x8")
+    GT:ApplyWoWStatusBarTexture(frame.statusBar)
     frame.statusBar:SetPoint("TOPLEFT", frame.statusBG, "TOPLEFT", 0, 0)
     frame.statusBar:SetPoint("BOTTOMRIGHT", frame.statusBG, "BOTTOMRIGHT", 0, 0)
     frame.statusBar:SetMinMaxValues(0, 1)
     frame.statusBar:SetValue(0)
 
     frame.spark = frame.statusBar:CreateTexture(nil, "OVERLAY")
-    frame.spark:SetTexture("Interface/Buttons/WHITE8x8")
-    frame.spark:SetSize(2, 18)
-    setTextureColor(frame.spark, 1, 1, 1, 0.72)
+    frame.spark:SetTexture("Interface/CastingBar/UI-CastingBar-Spark")
+    frame.spark:SetSize(18, 20)
+    setTextureColor(frame.spark, 1, 1, 1, 0.90)
 
     frame.unitText = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     frame.unitText:SetPoint("LEFT", frame.statusBar, "LEFT", 4, 0)

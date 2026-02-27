@@ -38,27 +38,17 @@ local function createPointerFrame(unit)
     local frame = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
     frame:SetSize(22, 22)
 
-    if frame.SetBackdrop then
-        frame:SetBackdrop({
-            bgFile = "Interface/Buttons/WHITE8x8",
-            edgeFile = "Interface/Buttons/WHITE8x8",
-            edgeSize = 1,
-        })
-        frame:SetBackdropColor(0.02, 0.02, 0.02, 0.68)
-        if frame.SetBackdropBorderColor then
-            frame:SetBackdropBorderColor(0.20, 0.20, 0.22, 0.95)
-        end
-    end
+    GT:ApplyWoWBackdrop(frame, "icon")
 
     frame.fill = frame:CreateTexture(nil, "BACKGROUND")
     frame.fill:SetAllPoints(frame)
-    frame.fill:SetTexture("Interface/Buttons/WHITE8x8")
-    setTextureColor(frame.fill, 0.28, 0.74, 1.0, 0.14)
+    frame.fill:SetTexture("Interface/Tooltips/UI-Tooltip-Background")
+    setTextureColor(frame.fill, 0.20, 0.34, 0.52, 0.18)
 
     frame.ring = frame:CreateTexture(nil, "BORDER")
     frame.ring:SetAllPoints(frame)
-    frame.ring:SetTexture("Interface/Buttons/WHITE8x8")
-    setTextureColor(frame.ring, 1, 1, 1, 0.08)
+    frame.ring:SetTexture("Interface/Tooltips/UI-Tooltip-Background")
+    setTextureColor(frame.ring, 1, 0.82, 0.40, 0.10)
 
     frame.texture = frame:CreateTexture(nil, "OVERLAY")
     frame.texture:SetAllPoints(frame)
@@ -238,7 +228,7 @@ function PointerSystem:ApplyPointerStyle(pointerFrame, unit, isExplicit)
     end
 
     if pointerFrame.SetBackdropBorderColor then
-        pointerFrame:SetBackdropBorderColor((r * 0.72) + 0.12, (g * 0.72) + 0.12, (b * 0.72) + 0.12, 0.95)
+        pointerFrame:SetBackdropBorderColor((r * 0.30) + 0.34, (g * 0.30) + 0.34, (b * 0.30) + 0.34, 0.98)
     end
 end
 

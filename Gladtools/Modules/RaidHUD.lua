@@ -150,17 +150,7 @@ end
 local function createIconFrame(parent)
     local icon = CreateFrame("Frame", nil, parent, "BackdropTemplate")
 
-    if icon.SetBackdrop then
-        icon:SetBackdrop({
-            bgFile = "Interface/Buttons/WHITE8x8",
-            edgeFile = "Interface/Buttons/WHITE8x8",
-            edgeSize = 1,
-        })
-        icon:SetBackdropColor(0.02, 0.02, 0.02, 0.90)
-        if icon.SetBackdropBorderColor then
-            icon:SetBackdropBorderColor(0.12, 0.12, 0.14, 0.95)
-        end
-    end
+    GT:ApplyWoWBackdrop(icon, "icon")
 
     icon.texture = icon:CreateTexture(nil, "ARTWORK")
     icon.texture:SetAllPoints(icon)
@@ -767,7 +757,7 @@ function RaidHUD:UpdateCooldownIcons(state, unit, settings, cache, now, scale)
             setIconCooldown(icon, entry.startTime or now, entry.duration or remaining)
 
             if icon.SetBackdropBorderColor then
-                icon:SetBackdropBorderColor(0.24, 0.74, 0.98, 0.95)
+                icon:SetBackdropBorderColor(0.58, 0.72, 0.92, 0.98)
             end
 
             icon:Show()
@@ -967,11 +957,11 @@ function RaidHUD:UpdateCCIcons(state, unit, settings, cache, now, scale)
             local priority = self.CC_CATEGORY_PRIORITY[entry.category] or 0
             if icon.SetBackdropBorderColor then
                 if priority >= 6 then
-                    icon:SetBackdropBorderColor(1.00, 0.34, 0.34, 0.95)
+                    icon:SetBackdropBorderColor(0.96, 0.52, 0.42, 0.98)
                 elseif priority >= 4 then
-                    icon:SetBackdropBorderColor(1.00, 0.72, 0.24, 0.95)
+                    icon:SetBackdropBorderColor(0.96, 0.80, 0.48, 0.98)
                 else
-                    icon:SetBackdropBorderColor(0.84, 0.84, 0.92, 0.95)
+                    icon:SetBackdropBorderColor(0.74, 0.74, 0.80, 0.98)
                 end
             end
 

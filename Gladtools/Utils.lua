@@ -70,6 +70,60 @@ local function normalizePath(path)
     return path
 end
 
+GT.WOW_UI_STYLE = {
+    statusBarTexture = "Interface/TargetingFrame/UI-StatusBar",
+    backdrops = {
+        panel = {
+            definition = {
+                bgFile = "Interface/DialogFrame/UI-DialogBox-Background-Dark",
+                edgeFile = "Interface/DialogFrame/UI-DialogBox-Border",
+                tile = true,
+                tileSize = 32,
+                edgeSize = 24,
+                insets = { left = 8, right = 8, top = 8, bottom = 8 },
+            },
+            bg = { 1, 1, 1, 0.96 },
+            border = { 1, 1, 1, 1.0 },
+        },
+        inset = {
+            definition = {
+                bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+                edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+                tile = true,
+                tileSize = 16,
+                edgeSize = 14,
+                insets = { left = 3, right = 3, top = 3, bottom = 3 },
+            },
+            bg = { 0.09, 0.09, 0.12, 0.88 },
+            border = { 0.62, 0.62, 0.68, 0.96 },
+        },
+        icon = {
+            definition = {
+                bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+                edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+                tile = true,
+                tileSize = 16,
+                edgeSize = 12,
+                insets = { left = 2, right = 2, top = 2, bottom = 2 },
+            },
+            bg = { 0.06, 0.06, 0.08, 0.96 },
+            border = { 0.70, 0.70, 0.76, 0.98 },
+        },
+        alert = {
+            definition = {
+                bgFile = "Interface/DialogFrame/UI-DialogBox-Background-Dark",
+                edgeFile = "Interface/DialogFrame/UI-DialogBox-Border",
+                tile = true,
+                tileSize = 32,
+                edgeSize = 24,
+                insets = { left = 8, right = 8, top = 8, bottom = 8 },
+            },
+            bg = { 0.16, 0.05, 0.05, 0.94 },
+            border = { 1.0, 0.32, 0.32, 1.0 },
+        },
+    },
+}
+
 function GT:DeepCopy(value)
     return deepCopy(value)
 end
@@ -254,4 +308,42 @@ function GT:SafeCall(callback, ...)
     end
     
     return nil
+end
+
+function GT:GetWoWStatusBarTexture()
+    local style = self.WOW_UI_STYLE
+    return style and style.statusBarTexture or "Interface/TargetingFrame/UI-StatusBar"
+end
+
+function GT:ApplyWoWStatusBarTexture(statusBar)
+    if statusBar and statusBar.SetStatusBarTexture then
+        statusBar:SetStatusBarTexture(self:GetWoWStatusBarTexture())
+    end
+end
+
+function GT:ApplyWoWBackdrop(frame, variant)
+    if not (frame and frame.SetBackdrop) then
+        return false
+    end
+
+    local style = self.WOW_UI_STYLE and self.WOW_UI_STYLE.backdrops
+    local entry = style and style[variant or "inset"] or nil
+    if not entry then
+        entry = style and style.inset or nil
+    end
+    if not entry then
+        return false
+    end
+
+    frame:SetBackdrop(entry.definition)
+
+    local bg = entry.bg or { 1, 1, 1, 1 }
+    frame:SetBackdropColor(bg[1], bg[2], bg[3], bg[4] or 1)
+
+    if frame.SetBackdropBorderColor then
+        local border = entry.border or { 1, 1, 1, 1 }
+        frame:SetBackdropBorderColor(border[1], border[2], border[3], border[4] or 1)
+    end
+
+    return true
 end

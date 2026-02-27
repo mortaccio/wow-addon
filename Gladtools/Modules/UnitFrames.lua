@@ -108,33 +108,10 @@ local function setBackdrop(frame, fancy)
 
     frame._fancyApplied = fancy
 
-    if fancy then
-        frame:SetBackdrop({
-            bgFile = "Interface/Tooltips/UI-Tooltip-Background",
-            edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
-            tile = true,
-            tileSize = 16,
-            edgeSize = 12,
-            insets = { left = 3, right = 3, top = 3, bottom = 3 },
-        })
-        frame:SetBackdropColor(0.03, 0.03, 0.04, 0.86)
-        if frame.SetBackdropBorderColor then
-            frame:SetBackdropBorderColor(0.42, 0.42, 0.46, 0.98)
-        end
-    else
-        frame:SetBackdrop({
-            bgFile = "Interface/Buttons/WHITE8x8",
-            edgeFile = "Interface/Buttons/WHITE8x8",
-            edgeSize = 1,
-        })
-        frame:SetBackdropColor(0.06, 0.06, 0.07, 0.78)
-        if frame.SetBackdropBorderColor then
-            frame:SetBackdropBorderColor(0.18, 0.18, 0.20, 0.95)
-        end
-    end
+    GT:ApplyWoWBackdrop(frame, fancy and "panel" or "inset")
 
     if frame.innerGlow then
-        setTextureColor(frame.innerGlow, 1, 1, 1, fancy and 0.045 or 0.015)
+        setTextureColor(frame.innerGlow, 1, 1, 1, fancy and 0.018 or 0.008)
     end
 end
 
@@ -152,14 +129,7 @@ local function createIcon(parent)
     local icon = CreateFrame("Frame", nil, parent, "BackdropTemplate")
     icon:SetSize(22, 22)
 
-    if icon.SetBackdrop then
-        icon:SetBackdrop({
-            bgFile = "Interface/Buttons/WHITE8x8",
-            edgeFile = "Interface/Buttons/WHITE8x8",
-            edgeSize = 1,
-        })
-        icon:SetBackdropColor(0.01, 0.01, 0.01, 0.88)
-    end
+    GT:ApplyWoWBackdrop(icon, "icon")
 
     icon.texture = icon:CreateTexture(nil, "ARTWORK")
     icon.texture:SetAllPoints(icon)
@@ -168,7 +138,7 @@ local function createIcon(parent)
     end
 
     icon.categoryAccent = icon:CreateTexture(nil, "OVERLAY")
-    icon.categoryAccent:SetTexture("Interface/Buttons/WHITE8x8")
+    icon.categoryAccent:SetTexture("Interface/Tooltips/UI-Tooltip-Background")
     icon.categoryAccent:SetPoint("TOPLEFT", icon, "TOPLEFT", 1, -1)
     icon.categoryAccent:SetPoint("TOPRIGHT", icon, "TOPRIGHT", -1, -1)
     icon.categoryAccent:SetHeight(2)
@@ -222,16 +192,9 @@ local function createDRBadge(parent)
 
     badge.fill = badge:CreateTexture(nil, "BACKGROUND")
     badge.fill:SetAllPoints(badge)
-    badge.fill:SetTexture("Interface/Buttons/WHITE8x8")
+    badge.fill:SetTexture("Interface/Tooltips/UI-Tooltip-Background")
 
-    if badge.SetBackdrop then
-        badge:SetBackdrop({
-            bgFile = "Interface/Buttons/WHITE8x8",
-            edgeFile = "Interface/Buttons/WHITE8x8",
-            edgeSize = 1,
-        })
-        badge:SetBackdropColor(0.02, 0.02, 0.02, 0.80)
-    end
+    GT:ApplyWoWBackdrop(badge, "inset")
 
     badge.text = badge:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     badge.text:SetPoint("CENTER", badge, "CENTER", 0, 0)
@@ -367,33 +330,33 @@ function UnitFrames:CreateUnitFrame(groupName, unit, index)
 
     frame.bg = frame:CreateTexture(nil, "BACKGROUND")
     frame.bg:SetAllPoints(frame)
-    frame.bg:SetTexture("Interface/Buttons/WHITE8x8")
-    setTextureColor(frame.bg, 0.02, 0.02, 0.03, 0.68)
+    frame.bg:SetTexture("Interface/Tooltips/UI-Tooltip-Background")
+    setTextureColor(frame.bg, 0.08, 0.08, 0.10, 0.74)
 
     frame.innerGlow = frame:CreateTexture(nil, "ARTWORK")
     frame.innerGlow:SetAllPoints(frame)
-    frame.innerGlow:SetTexture("Interface/Buttons/WHITE8x8")
-    setTextureColor(frame.innerGlow, 1, 1, 1, 0.04)
+    frame.innerGlow:SetTexture("Interface/DialogFrame/UI-DialogBox-Background")
+    setTextureColor(frame.innerGlow, 1, 1, 1, 0.03)
 
     frame.topAccent = frame:CreateTexture(nil, "BORDER")
-    frame.topAccent:SetTexture("Interface/Buttons/WHITE8x8")
+    frame.topAccent:SetTexture("Interface/Tooltips/UI-Tooltip-Background")
     frame.topAccent:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
     frame.topAccent:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -1, -1)
     frame.topAccent:SetHeight(2)
-    setTextureColor(frame.topAccent, 0.45, 0.45, 0.48, 0.95)
+    setTextureColor(frame.topAccent, 0.86, 0.78, 0.48, 0.70)
 
     frame.leftAccent = frame:CreateTexture(nil, "BORDER")
-    frame.leftAccent:SetTexture("Interface/Buttons/WHITE8x8")
+    frame.leftAccent:SetTexture("Interface/Tooltips/UI-Tooltip-Background")
     frame.leftAccent:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
     frame.leftAccent:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 1)
     frame.leftAccent:SetWidth(2)
-    setTextureColor(frame.leftAccent, 0.45, 0.45, 0.48, 0.88)
+    setTextureColor(frame.leftAccent, 0.86, 0.78, 0.48, 0.62)
 
     frame.classIconBG = frame:CreateTexture(nil, "BORDER")
-    frame.classIconBG:SetTexture("Interface/Buttons/WHITE8x8")
+    frame.classIconBG:SetTexture("Interface/Tooltips/UI-Tooltip-Background")
     frame.classIconBG:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -7)
     frame.classIconBG:SetSize(20, 20)
-    setTextureColor(frame.classIconBG, 0.02, 0.02, 0.03, 0.90)
+    setTextureColor(frame.classIconBG, 0.10, 0.10, 0.12, 0.90)
 
     frame.classIcon = frame:CreateTexture(nil, "ARTWORK")
     frame.classIcon:SetPoint("TOPLEFT", frame.classIconBG, "TOPLEFT", 1, -1)
@@ -429,14 +392,14 @@ function UnitFrames:CreateUnitFrame(groupName, unit, index)
     frame.detailText:SetTextColor(0.72, 0.76, 0.84)
 
     frame.healthBarBG = frame:CreateTexture(nil, "ARTWORK")
-    frame.healthBarBG:SetTexture("Interface/Buttons/WHITE8x8")
+    frame.healthBarBG:SetTexture("Interface/Tooltips/UI-Tooltip-Background")
     frame.healthBarBG:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -23)
     frame.healthBarBG:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -40, -23)
     frame.healthBarBG:SetHeight(groupName == "near" and 12 or 14)
-    setTextureColor(frame.healthBarBG, 0.08, 0.08, 0.09, 0.92)
+    setTextureColor(frame.healthBarBG, 0.06, 0.06, 0.07, 0.92)
 
     frame.healthBar = CreateFrame("StatusBar", nil, frame)
-    frame.healthBar:SetStatusBarTexture("Interface/Buttons/WHITE8x8")
+    GT:ApplyWoWStatusBarTexture(frame.healthBar)
     frame.healthBar:SetPoint("TOPLEFT", frame.healthBarBG, "TOPLEFT", 1, -1)
     frame.healthBar:SetPoint("BOTTOMRIGHT", frame.healthBarBG, "BOTTOMRIGHT", -1, 1)
     frame.healthBar:SetMinMaxValues(0, 1)
@@ -444,8 +407,8 @@ function UnitFrames:CreateUnitFrame(groupName, unit, index)
 
     frame.healthBarOverlay = frame.healthBar:CreateTexture(nil, "OVERLAY")
     frame.healthBarOverlay:SetAllPoints(frame.healthBar)
-    frame.healthBarOverlay:SetTexture("Interface/Buttons/WHITE8x8")
-    setTextureColor(frame.healthBarOverlay, 1, 1, 1, 0.06)
+    frame.healthBarOverlay:SetTexture("Interface/Tooltips/UI-Tooltip-Background")
+    setTextureColor(frame.healthBarOverlay, 1, 1, 1, 0.04)
 
     frame.healthValue = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     frame.healthValue:SetPoint("RIGHT", frame.healthBarBG, "RIGHT", -3, 0)
@@ -739,20 +702,20 @@ end
 function UnitFrames:ApplyFrameChrome(frame, classFile, fancy)
     local r, g, b = GT:GetClassColor(classFile)
     if not fancy then
-        r, g, b = 0.56, 0.56, 0.60
+        r, g, b = 0.72, 0.72, 0.74
     end
 
-    setTextureColor(frame.topAccent, r, g, b, fancy and 0.95 or 0.70)
-    setTextureColor(frame.leftAccent, r, g, b, fancy and 0.92 or 0.60)
-    setTextureColor(frame.innerGlow, r, g, b, fancy and 0.05 or 0.02)
-    setTextureColor(frame.classIconBG, r * 0.20, g * 0.20, b * 0.20, fancy and 0.85 or 0.70)
+    setTextureColor(frame.topAccent, r, g, b, fancy and 0.62 or 0.44)
+    setTextureColor(frame.leftAccent, r, g, b, fancy and 0.56 or 0.38)
+    setTextureColor(frame.innerGlow, r, g, b, fancy and 0.018 or 0.010)
+    setTextureColor(frame.classIconBG, 0.12, 0.12, 0.14, fancy and 0.92 or 0.82)
 
     if frame.SetBackdropBorderColor then
         frame:SetBackdropBorderColor(
-            math.min(1, (r * 0.38) + 0.10),
-            math.min(1, (g * 0.38) + 0.10),
-            math.min(1, (b * 0.38) + 0.10),
-            0.95
+            math.min(1, (r * 0.30) + 0.34),
+            math.min(1, (g * 0.30) + 0.34),
+            math.min(1, (b * 0.30) + 0.34),
+            0.98
         )
     end
 end

@@ -10,11 +10,11 @@ local function createSectionHeader(parent, text, x, y)
     header:SetText(text)
 
     local line = parent:CreateTexture(nil, "BORDER")
-    line:SetTexture("Interface/Buttons/WHITE8x8")
+    line:SetTexture("Interface/Tooltips/UI-Tooltip-Background")
     line:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -3)
     line:SetPoint("TOPRIGHT", header, "BOTTOMLEFT", 220, -3)
     line:SetHeight(1)
-    line:SetVertexColor(0.26, 0.34, 0.48, 0.92)
+    line:SetVertexColor(0.72, 0.72, 0.76, 0.85)
 
     header.line = line
     return header
@@ -65,25 +65,14 @@ local function createCard(parent, x, y, width, height, titleText, subtitleText)
     card:SetPoint("TOPLEFT", x, y)
     card:SetSize(width, height)
 
-    if card.SetBackdrop then
-        card:SetBackdrop({
-            bgFile = "Interface/Buttons/WHITE8x8",
-            edgeFile = "Interface/Buttons/WHITE8x8",
-            edgeSize = 1,
-            insets = { left = 1, right = 1, top = 1, bottom = 1 },
-        })
-        card:SetBackdropColor(0.07, 0.08, 0.11, 0.86)
-        if card.SetBackdropBorderColor then
-            card:SetBackdropBorderColor(0.24, 0.28, 0.36, 0.98)
-        end
-    end
+    GT:ApplyWoWBackdrop(card, "inset")
 
     card.topAccent = card:CreateTexture(nil, "BORDER")
-    card.topAccent:SetTexture("Interface/Buttons/WHITE8x8")
+    card.topAccent:SetTexture("Interface/Tooltips/UI-Tooltip-Background")
     card.topAccent:SetPoint("TOPLEFT", card, "TOPLEFT", 1, -1)
     card.topAccent:SetPoint("TOPRIGHT", card, "TOPRIGHT", -1, -1)
     card.topAccent:SetHeight(2)
-    card.topAccent:SetVertexColor(0.20, 0.74, 0.98, 0.90)
+    card.topAccent:SetVertexColor(0.86, 0.78, 0.48, 0.78)
 
     if titleText then
         card.title = card:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -123,7 +112,7 @@ function SettingsUI:CreatePanel()
         return
     end
 
-    local panel = CreateFrame("Frame", "GladtoolsSettingsPanel", UIParent)
+    local panel = CreateFrame("Frame", "GladtoolsSettingsPanel", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     panel.name = "Gladtools"
 
     panel:SetScript("OnShow", function()
@@ -144,32 +133,12 @@ function SettingsUI:CreatePanel()
         end
     end)
 
-    if panel.SetBackdrop then
-        panel:SetBackdrop({
-            bgFile = "Interface/Buttons/WHITE8x8",
-            edgeFile = "Interface/Buttons/WHITE8x8",
-            edgeSize = 1,
-            insets = { left = 1, right = 1, top = 1, bottom = 1 },
-        })
-        panel:SetBackdropColor(0.04, 0.05, 0.07, 0.92)
-        if panel.SetBackdropBorderColor then
-            panel:SetBackdropBorderColor(0.20, 0.24, 0.32, 0.98)
-        end
-    end
+    GT:ApplyWoWBackdrop(panel, "panel")
 
-    panel.headerGlow = panel:CreateTexture(nil, "BORDER")
-    panel.headerGlow:SetTexture("Interface/Buttons/WHITE8x8")
-    panel.headerGlow:SetPoint("TOPLEFT", panel, "TOPLEFT", 1, -1)
-    panel.headerGlow:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -1, -1)
-    panel.headerGlow:SetHeight(42)
-    panel.headerGlow:SetVertexColor(0.18, 0.74, 1.0, 0.10)
-
-    panel.leftAura = panel:CreateTexture(nil, "BACKGROUND")
-    panel.leftAura:SetTexture("Interface/Buttons/WHITE8x8")
-    panel.leftAura:SetPoint("TOPLEFT", panel, "TOPLEFT", 1, -44)
-    panel.leftAura:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 1, 1)
-    panel.leftAura:SetWidth(190)
-    panel.leftAura:SetVertexColor(0.22, 0.60, 0.96, 0.05)
+    panel.headerTexture = panel:CreateTexture(nil, "ARTWORK")
+    panel.headerTexture:SetTexture("Interface/DialogFrame/UI-DialogBox-Header")
+    panel.headerTexture:SetSize(360, 64)
+    panel.headerTexture:SetPoint("TOP", panel, "TOP", 0, 12)
 
     local title = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
     title:SetPoint("TOPLEFT", 20, -20)
