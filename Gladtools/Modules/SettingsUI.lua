@@ -183,7 +183,7 @@ function SettingsUI:CreatePanel()
     self.cards.presets = createCard(panel, 16, -68, 426, 86)
     self.cards.core = createCard(panel, 16, -162, 426, 530)
     self.cards.display = createCard(panel, 456, -68, 298, 410)
-    self.cards.snapshot = createCard(panel, 456, -488, 298, 154, "Live Arena Snapshot", "Current runtime activity")
+    self.cards.snapshot = createCard(panel, 456, -488, 298, 210, "Live Arena Snapshot", "Current runtime activity")
 
     createSectionHeader(panel, "Presets", 20, -76)
 
@@ -337,6 +337,13 @@ function SettingsUI:CreatePanel()
     end
     self.controls.runtimeSnapshot:SetText("Waiting for combat data...")
 
+    createButton(panel, "Run UI Check", 468, -678, 130, function()
+        if GT.PrintDisplayDiagnostics then
+            GT:PrintDisplayDiagnostics()
+        end
+        SettingsUI:RefreshRuntimeSnapshot()
+    end)
+
     panel:Hide()
     self.panel = panel
 
@@ -388,6 +395,10 @@ function SettingsUI:BuildRuntimeSnapshotText()
         string.format("Cast Bars  %d active    Pointers %d", activeCasts, pointers),
         string.format("Raid HUD   %d attached  (%d visible)", raidHUDAttached, raidHUDVisible),
     }
+
+    if GT.GetDisplayDiagnosticsSummaryLine then
+        lines[#lines + 1] = GT:GetDisplayDiagnosticsSummaryLine()
+    end
 
     return table.concat(lines, "\n")
 end

@@ -452,6 +452,11 @@ function UnitFrames:CreateUnitFrame(groupName, unit, index)
     frame.healthValue:SetJustifyH("RIGHT")
     frame.healthValue:SetTextColor(0.96, 0.96, 0.98)
 
+    frame.healthPercent = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    frame.healthPercent:SetPoint("LEFT", frame.healthBarBG, "LEFT", 3, 0)
+    frame.healthPercent:SetJustifyH("LEFT")
+    frame.healthPercent:SetTextColor(0.96, 0.96, 0.98)
+
     frame.cooldownRow = CreateFrame("Frame", nil, frame)
     frame.cooldownRow:SetPoint("TOPLEFT", frame.healthBarBG, "BOTTOMLEFT", 0, -4)
     frame.cooldownRow:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -8, -40)
@@ -953,10 +958,26 @@ function UnitFrames:UpdateHealthAndName(frame)
     local name = UnitName and UnitName(frame.unit) or frame.unit
     local _, classFile = UnitClass and UnitClass(frame.unit)
     local r, g, b = GT:GetClassColor(classFile)
+    local isConnected = UnitIsConnected and UnitIsConnected(frame.unit) or true
+    local isDead = UnitIsDeadOrGhost and UnitIsDeadOrGhost(frame.unit) or false
 
     frame.nameText:SetText(name or frame.unit)
     frame.nameText:SetTextColor(r, g, b)
     self:SetClassIcon(frame, classFile)
+
+    if not isConnected then
+        frame.healthBar:SetMinMaxValues(0, 1)
+        frame.healthBar:SetValue(0)
+        frame.healthBar:SetStatusBarColor(0.34, 0.34, 0.38, 1)
+        frame.healthValue:SetText("OFFLINE")
+        frame.healthValue:SetTextColor(0.78, 0.78, 0.82)
+        if frame.healthPercent then
+            frame.healthPercent:SetText("--")
+            frame.healthPercent:SetTextColor(0.74, 0.74, 0.78)
+        end
+        self:UpdateStatusTag(frame, 0)
+        return classFile, 0, 1, 0
+    end
 
     local health = UnitHealth and UnitHealth(frame.unit) or 0
     local maxHealth = UnitHealthMax and UnitHealthMax(frame.unit) or 1
@@ -975,13 +996,36 @@ function UnitFrames:UpdateHealthAndName(frame)
         percent = 100
     end
 
-    frame.healthValue:SetText(string.format("%d%%  %s/%s", percent, GT:FormatCompactNumber(health), GT:FormatCompactNumber(maxHealth)))
-    if percent <= 35 then
-        frame.healthValue:SetTextColor(1, 0.35, 0.35)
-    elseif percent <= 60 then
-        frame.healthValue:SetTextColor(1, 0.86, 0.35)
+    if isDead then
+        frame.healthBar:SetValue(0)
+        frame.healthBar:SetStatusBarColor(0.34, 0.34, 0.38, 1)
+        frame.healthValue:SetText("DEAD")
+        frame.healthValue:SetTextColor(0.94, 0.38, 0.38)
+        if frame.healthPercent then
+            frame.healthPercent:SetText("0%")
+            frame.healthPercent:SetTextColor(0.94, 0.38, 0.38)
+        end
     else
-        frame.healthValue:SetTextColor(0.95, 0.95, 0.98)
+        frame.healthValue:SetText(string.format("%s/%s", GT:FormatCompactNumber(health), GT:FormatCompactNumber(maxHealth)))
+        if frame.healthPercent then
+            frame.healthPercent:SetText(string.format("%d%%", percent))
+        end
+        if percent <= 35 then
+            frame.healthValue:SetTextColor(1, 0.35, 0.35)
+            if frame.healthPercent then
+                frame.healthPercent:SetTextColor(1, 0.35, 0.35)
+            end
+        elseif percent <= 60 then
+            frame.healthValue:SetTextColor(1, 0.86, 0.35)
+            if frame.healthPercent then
+                frame.healthPercent:SetTextColor(1, 0.86, 0.35)
+            end
+        else
+            frame.healthValue:SetTextColor(0.95, 0.95, 0.98)
+            if frame.healthPercent then
+                frame.healthPercent:SetTextColor(0.92, 0.96, 1.00)
+            end
+        end
     end
 
     self:UpdateStatusTag(frame, percent)
@@ -997,7 +1041,10 @@ function UnitFrames:UpdateDetailText(frame, classFile, guid)
     local classLabel = toTitleToken(classFile)
 
     local cdPart = "CD ready"
-    if frame._cooldownCount and frame._cooldownCount > 0 then
+    if GT.IsCombatDataRestricted and GT:IsCombatDataRestricted() then
+        cdPart = "CD unavailable"
+    end
+    if cdPart ~= "CD unavailable" and frame._cooldownCount and frame._cooldownCount > 0 then
         local nextText = frame._cooldownNext and GT:FormatRemaining(frame._cooldownNext) or ""
         if nextText ~= "" then
             cdPart = string.format("CD %d (%s)", frame._cooldownCount, nextText)
@@ -1007,7 +1054,15 @@ function UnitFrames:UpdateDetailText(frame, classFile, guid)
     end
 
     local trinketPart = "Trinket ready"
-    if frame._trinketRemaining and frame._trinketRemaining > 0 then
+    local connected = UnitIsConnected and UnitIsConnected(frame.unit) or true
+    local dead = UnitIsDeadOrGhost and UnitIsDeadOrGhost(frame.unit) or false
+    if not connected then
+        trinketPart = "Trinket ?"
+    end
+    if dead then
+        trinketPart = "Trinket n/a"
+    end
+    if connected and (not dead) and frame._trinketRemaining and frame._trinketRemaining > 0 then
         trinketPart = "Trinket " .. GT:FormatRemaining(frame._trinketRemaining)
     end
 

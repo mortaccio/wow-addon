@@ -39,7 +39,91 @@ function GT:PrintHelp()
     self:Print("/gladtools pointers <off|all|healers> - Set pointer mode")
     self:Print("/gladtools state - Show current preset state")
     self:Print("/gladtools snapshot - Print live tracker snapshot")
+    self:Print("/gladtools uicheck - Validate display module health")
     self:Print("/gladtools help - Show this help")
+end
+
+function GT:BuildDisplayDiagnostics()
+    local settings = self.db and self.db.settings or {}
+    local lines = {}
+    local issues = 0
+
+    local function pushStatus(ok, label, detail)
+        local prefix = ok and "|cff5ff08eOK|r" or "|cffd08282WARN|r"
+        local suffix = ""
+        if detail and detail ~= "" then
+            suffix = " - " .. detail
+        end
+        lines[#lines + 1] = string.format("%s %s%s", prefix, label, suffix)
+        if not ok then
+            issues = issues + 1
+        end
+    end
+
+    local unitFramesEnabled = settings.unitFrames
+        and ((settings.unitFrames.enemy and settings.unitFrames.enemy.enabled)
+            or (settings.unitFrames.friendly and settings.unitFrames.friendly.enabled)
+            or (settings.unitFrames.near and settings.unitFrames.near.enabled))
+        and true or false
+    pushStatus(self.UnitFrames ~= nil, "UnitFrames module", unitFramesEnabled and "enabled in settings" or "disabled in settings")
+
+    if self.UnitFrames and self.UnitFrames.GetVisibleGroupCounts then
+        local counts = self.UnitFrames:GetVisibleGroupCounts()
+        local unitFramesDriverActive = self.UnitFrames.driverActive and true or false
+        local visibilityOK = (not unitFramesEnabled) or unitFramesDriverActive
+        pushStatus(visibilityOK, "UnitFrames visibility", string.format("E:%d F:%d N:%d driver:%s", counts.enemy or 0, counts.friendly or 0, counts.near or 0, unitFramesDriverActive and "on" or "off"))
+    end
+
+    local cooldownsEnabled = settings.unitFrames and settings.unitFrames.cooldowns and settings.unitFrames.cooldowns.enabled and true or false
+    local cooldownModuleReady = self.CooldownTracker and self.CooldownTracker.IsEnabled and self.CooldownTracker:IsEnabled()
+    pushStatus((not cooldownsEnabled) or cooldownModuleReady, "Cooldown tracker", cooldownsEnabled and (cooldownModuleReady and "tracking active" or "settings enabled but tracker paused") or "disabled in settings")
+
+    local trinketsEnabled = settings.trinkets and settings.trinkets.enabled ~= false
+    local trinketModuleReady = self.TrinketTracker and self.TrinketTracker.IsEnabled and self.TrinketTracker:IsEnabled()
+    pushStatus((not trinketsEnabled) or trinketModuleReady, "Trinket tracker", trinketsEnabled and (trinketModuleReady and "tracking active" or "settings enabled but tracker paused") or "disabled in settings")
+
+    local drEnabled = settings.dr and settings.dr.enabled and true or false
+    local drModuleReady = self.DRTracker and self.DRTracker.IsEnabled and self.DRTracker:IsEnabled()
+    pushStatus((not drEnabled) or drModuleReady, "DR tracker", drEnabled and (drModuleReady and "tracking active" or "settings enabled but tracker paused") or "disabled in settings")
+
+    local castBarsEnabled = settings.castBars and settings.castBars.enabled and true or false
+    pushStatus((not castBarsEnabled) or (self.CastBars ~= nil), "Cast bars", castBarsEnabled and "enabled in settings" or "disabled in settings")
+
+    local pointerMode = settings.pointers and settings.pointers.mode or self.POINTER_MODES.OFF
+    local pointersEnabled = pointerMode ~= self.POINTER_MODES.OFF
+    pushStatus((not pointersEnabled) or (self.PointerSystem ~= nil), "Pointer system", pointersEnabled and ("mode: " .. tostring(pointerMode)) or "mode off")
+
+    local raidHUDEnabled = settings.raidHUD and settings.raidHUD.enabled and true or false
+    local raidHUDAttached, raidHUDVisible = 0, 0
+    if self.RaidHUD and self.RaidHUD.GetAttachedCounts then
+        raidHUDAttached, raidHUDVisible = self.RaidHUD:GetAttachedCounts()
+    end
+    pushStatus((not raidHUDEnabled) or (self.RaidHUD ~= nil), "Raid HUD", raidHUDEnabled and string.format("attached:%d visible:%d", raidHUDAttached, raidHUDVisible) or "disabled in settings")
+
+    if self:IsCombatDataRestricted() then
+        lines[#lines + 1] = "|cffffc85aINFO|r Combat data restricted in current instance."
+    end
+
+    return lines, issues
+end
+
+function GT:GetDisplayDiagnosticsSummaryLine()
+    local _, issues = self:BuildDisplayDiagnostics()
+    if issues == 0 then
+        return "|cff5ff08eDisplay Health: all checks passed|r"
+    end
+    return string.format("|cffd08282Display Health: %d issue%s detected|r", issues, issues == 1 and "" or "s")
+end
+
+function GT:PrintDisplayDiagnostics()
+    local lines, issues = self:BuildDisplayDiagnostics()
+    self:Print(self:GetDisplayDiagnosticsSummaryLine())
+    for _, line in ipairs(lines) do
+        self:Print(line)
+    end
+    if issues > 0 then
+        self:Print("Use /gladtools snapshot for live counters and verify module settings in /gladtools.")
+    end
 end
 
 function GT:PrintRuntimeSnapshot()
@@ -126,6 +210,8 @@ function GT:HandleSlashCommand(message)
         self:SetPointerModeFromSlash(rest)
     elseif command == "snapshot" then
         self:PrintRuntimeSnapshot()
+    elseif command == "uicheck" then
+        self:PrintDisplayDiagnostics()
     elseif command == "state" then
         self:Print("Preset state: " .. self:GetPresetStateLabel())
     elseif command == "help" then

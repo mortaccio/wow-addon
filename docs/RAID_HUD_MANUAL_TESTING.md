@@ -36,12 +36,13 @@ Mitigations implemented:
 ### 1) Base enablement
 
 1. Login and run `/gladtools`.
-2. Enable:
+2. Run `/gladtools uicheck` to verify display module health before testing.
+3. Enable:
    - `Attach HUD to Blizzard raid frames`
    - `Raid HUD: defensive cooldown icons`
    - `Raid HUD: class-color pointer`
    - `Raid HUD: CC debuff icons`
-3. Join party/raid and show Blizzard raid/party frames.
+4. Join party/raid and show Blizzard raid/party frames.
 
 Expected:
 

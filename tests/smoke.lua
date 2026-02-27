@@ -277,6 +277,12 @@ assert(type(raidHUDSettings) == "table" and raidHUDSettings.enabled == true, "ra
 assert(type(raidHUDSettings.cooldowns.defensiveSpells) == "table" and #raidHUDSettings.cooldowns.defensiveSpells > 0, "raid hud defensive spell defaults missing")
 assert(type(raidHUDSettings.cc.spells) == "table" and #raidHUDSettings.cc.spells > 0, "raid hud cc spell defaults missing")
 
+local diagLines, diagIssues = addon:BuildDisplayDiagnostics()
+assert(type(diagLines) == "table", "display diagnostics should return a line table")
+assert(type(diagIssues) == "number", "display diagnostics should return issue count")
+assert(type(addon:GetDisplayDiagnosticsSummaryLine()) == "string", "display diagnostics summary should return text")
+addon:HandleSlashCommand("uicheck")
+
 local defensiveLookup, hasDefensiveLookup = addon.RaidHUD:BuildSpellLookup({ 871, 33206 })
 assert(hasDefensiveLookup and defensiveLookup[871] and defensiveLookup[33206], "raid hud spell lookup should include configured spell IDs")
 assert(addon.RaidHUD:IsDefensiveEntry({ spellID = 871, category = "defensive" }, { hasDefensiveLookup = false }), "defensive category should pass fallback defensive filter")

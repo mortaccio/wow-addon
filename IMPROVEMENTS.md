@@ -168,6 +168,36 @@ end
 
 ---
 
+## 8. **UI Design + Display Health Diagnostics** ✅
+
+### Motivation
+As settings and raid HUD features expanded, it became harder to verify if display modules were actually healthy at runtime (enabled, active, or blocked by context).
+
+### Changes Made
+- **Main.lua**
+  - Added `/gladtools uicheck` command.
+  - Added `GT:BuildDisplayDiagnostics()` and summary helpers for runtime display validation.
+  - Extended help text with display-health command.
+- **SettingsUI.lua**
+  - Expanded live snapshot card.
+  - Added `Run UI Check` button in the settings panel.
+  - Added diagnostics summary line to snapshot text for quick visual status.
+- **UnitFrames.lua**
+  - Improved health information rendering:
+    - distinct offline state (`OFFLINE`)
+    - distinct dead state (`DEAD`)
+    - dedicated left-side health percent text
+  - Added safer detail-line labeling when combat data is restricted.
+- **tests/smoke.lua**
+  - Added assertions for display diagnostics and `uicheck` command path.
+
+### Operator workflow
+1. Open settings with `/gladtools`.
+2. Click `Run UI Check` or run `/gladtools uicheck` in chat.
+3. Use `/gladtools snapshot` for live counters if any warnings appear.
+
+---
+
 ## Summary of Files Modified
 
 | File | Changes |
